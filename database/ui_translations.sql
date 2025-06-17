@@ -210,3 +210,8 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('conjugated_result', 'yonaguni', '形態'),
 ('conjugated_result', 'zh-tw', '形態'),
 ('conjugated_result', 'en', 'Result');
+
+('label_verb_stem', 'ja', '語幹'),
+('label_verb_stem', 'yonaguni', '語幹'), 
+('label_verb_stem', 'zh-tw', '詞幹'),
+('label_verb_stem', 'en', 'Verb Stem');

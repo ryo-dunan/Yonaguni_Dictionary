@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>与那国語辞典 - 管理ページ</title>
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
     <style>
         /* 全体スタイル設定 */
         * {
@@ -45,6 +46,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        
+        .nav-bar .nav-left {
+            display: flex;
+            gap: 10px;
         }
 
         .nav-link {
@@ -105,14 +111,19 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-
-        .button-success {
-            background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
+        
+        .button-danger {
+            background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
             color: white;
         }
 
-        .button-danger {
-            background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+        .button-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .button-success {
+            background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
             color: white;
         }
 
@@ -121,7 +132,7 @@
             color: #333;
             border: 1px solid #ddd;
         }
-
+        
         /* フォーム要素 */
         .form-group {
             margin-bottom: 20px;
@@ -176,6 +187,14 @@
             font-weight: bold;
             color: #333;
         }
+        
+        .data-table th input[type="checkbox"],
+        .data-table td input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
 
         .data-table tr:hover {
             background-color: #f8f9fa;
@@ -314,12 +333,32 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        
+        /* インポート結果のスタイル */
+        #import-result-summary {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        #import-errors-details {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .error-item {
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
 
         /* 検索バー */
         .search-bar {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            align-items: center;
         }
 
         .search-input {
@@ -367,19 +406,29 @@
 
     <!-- ナビゲーションバー -->
     <div class="nav-bar">
-        <a href="/" class="nav-link">辞典に戻る</a>
-        <button class="button button-primary" onclick="showAddEntryModal()">新規見出し語追加</button>
+        <div class="nav-left">
+            <a href="/" class="nav-link">辞典に戻る</a>
+        </div>
+        <div class="nav-right">
+            <button class="button button-primary" onclick="triggerBulkImport()">一括導入</button>
+            <input type="file" id="bulk-import-file" accept=".json" style="display: none;" onchange="handleFileSelect(event)">
+            <button class="button button-primary" onclick="showAddEntryModal()">新規見出し語追加</button>
+        </div>
     </div>
 
     <!-- メインコンテナ -->
     <div class="container">
-        <!-- 検索セクション -->
+        <!-- 検索・一括操作セクション -->
         <div class="section">
-            <div class="section-title">見出し語検索</div>
+            <div class="section-title">見出し語の管理</div>
             <div class="search-bar">
                 <input type="text" class="search-input" id="admin-search-input" placeholder="見出し語を検索...">
                 <button class="button button-primary" onclick="searchEntries()">検索</button>
                 <button class="button button-secondary" onclick="loadAllEntries()">すべて表示</button>
+            </div>
+            <div class="bulk-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                 <button class="button button-danger" onclick="deleteSelectedEntries()">選択した項目を削除</button>
+                 <button class="button button-danger" onclick="deleteAllEntries()" style="margin-left: auto;">すべての見出し語を削除</button>
             </div>
         </div>
 
@@ -397,7 +446,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="modal-title">新規見出し語追加</h2>
-                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <span class="modal-close" onclick="closeModal('entry-modal')">&times;</span>
             </div>
 
             <!-- タブ -->
@@ -439,10 +488,17 @@
                     </select>
                 </div>
                 
-                <div class="form-group" id="verb-class-group" style="display: none;">
+                <!-- ========== ここから新機能 ========== -->
+                <div class="form-group verb-only-field" style="display: none;">
                     <label class="form-label">動詞クラス</label>
                     <input type="text" class="form-input" id="verb-class">
                 </div>
+                
+                <div class="form-group verb-only-field" style="display: none;">
+                    <label class="form-label">語幹</label>
+                    <input type="text" class="form-input" id="verb-stem" placeholder="複数の語幹はコンマ（,）で区切ります">
+                </div>
+                <!-- ========== 新機能ここまで ========== -->
                 
                 <div class="form-group">
                     <label class="form-label">音調</label>
@@ -548,8 +604,24 @@
 
             <!-- ボタン -->
             <div style="margin-top: 30px; text-align: right;">
-                <button class="button button-secondary" onclick="closeModal()">キャンセル</button>
+                <button class="button button-secondary" onclick="closeModal('entry-modal')">キャンセル</button>
                 <button class="button button-success" onclick="saveEntry()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 一括導入結果モーダル -->
+    <div class="modal" id="import-result-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">一括導入結果</h2>
+                <span class="modal-close" onclick="closeModal('import-result-modal')">&times;</span>
+            </div>
+            <div id="import-result-body">
+                <!-- 結果はここに挿入されます -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="button button-primary" onclick="closeModal('import-result-modal')">閉じる</button>
             </div>
         </div>
     </div>
@@ -588,19 +660,30 @@
             }
 
             let html = '<table class="data-table">';
-            html += '<thead><tr><th>見出し語</th><th>かな</th><th>品詞</th><th>意味</th><th>操作</th></tr></thead>';
+            html += `
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll(this)"></th>
+                        <th>見出し語</th>
+                        <th>かな</th>
+                        <th>品詞</th>
+                        <th>意味</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>`;
             html += '<tbody>';
             
             entries.forEach(entry => {
                 html += `
                     <tr>
+                        <td><input type="checkbox" class="entry-checkbox" data-id="${entry.id}"></td>
                         <td>${entry.headword}</td>
                         <td>${entry.kana || ''}</td>
                         <td>${entry.pos || ''}</td>
                         <td>${entry.definition || ''}</td>
                         <td>
                             <button class="button button-primary" onclick="editEntry(${entry.id})">編集</button>
-                            <button class="button button-danger" onclick="deleteEntry(${entry.id})">削除</button>
+                            <button class="button button-danger" onclick="deleteSingleEntry(${entry.id})">削除</button>
                         </td>
                     </tr>
                 `;
@@ -632,9 +715,13 @@
         async function editEntry(entryId) {
             currentEntryId = entryId;
             document.getElementById('modal-title').textContent = '見出し語編集';
+            resetForm();
             
             try {
+                // 編集ではまず日本語データを基準にフォームを埋める
                 const response = await fetch(`/api/entry/${entryId}?language=ja`);
+                if (!response.ok) throw new Error('見出し語の読み込みに失敗しました。');
+                
                 const entry = await response.json();
                 
                 // 基本情報を設定
@@ -643,21 +730,18 @@
                 document.getElementById('ipa').value = entry.ipa || '';
                 document.getElementById('pos').value = entry.pos || '';
                 document.getElementById('verb-class').value = entry.verb_class || '';
+                document.getElementById('verb-stem').value = entry.verb_stem || ''; // ★★★ 新機能 ★★★
                 document.getElementById('tone').value = entry.tone || '';
                 document.getElementById('etymology').value = entry.etymology || '';
                 document.getElementById('historical-change').value = entry.historical_change || '';
                 
-                // 品詞が動詞の場合、動詞クラスフィールドを表示
                 toggleVerbFields();
                 
                 // 音声ファイルを表示
                 if (entry.audio) {
                     document.getElementById('entry-audio-status').innerHTML = `
-                        <span style="color: green;">✓ 音声ファイル: ${entry.audio}</span>
-                        <button class="audio-button" onclick="playAudio('/static/media/${entry.audio}')" style="margin-left: 10px;">
-                            <span class="audio-icon">🔊</span> 再生
-                        </button>
-                    `;
+                        <audio controls src="/static/media/${entry.audio}" style="vertical-align: middle;"></audio>
+                        <span style="color: green; margin-left: 10px;"> ${entry.audio}</span>`;
                 }
                 
                 // 画像ファイルを表示
@@ -682,803 +766,468 @@
                     });
                 }
                 
-                // 同義語を設定
                 setSynonyms(entry.synonyms || []);
-                
-                // 意味を設定
-                setMeanings(entry);
-                
-                // 活用形を設定
+                await setAllLanguageMeanings(entry.id);
                 setConjugations(entry.conjugations || []);
-                
-                // 例文を設定
-                setExamples(entry.examples || []);
+                await setAllLanguageExamples(entry.id);
                 
                 document.getElementById('entry-modal').style.display = 'block';
             } catch (error) {
-                console.error('Error loading entry:', error);
-                alert('見出し語の読み込みに失敗しました。');
+                console.error('Error loading entry for editing:', error);
+                alert(error.message);
             }
         }
 
-        // 見出し語削除
-        async function deleteEntry(entryId) {
-            if (!confirm('この見出し語を削除してもよろしいですか？')) {
+        // 単一の見出し語を削除（ボタン用）
+        function deleteSingleEntry(entryId) {
+             if (confirm('この見出し語を削除してもよろしいですか？')) {
+                deleteEntries([entryId]);
+            }
+        }
+
+        // 選択された見出し語を削除
+        function deleteSelectedEntries() {
+            const selectedIds = Array.from(document.querySelectorAll('.entry-checkbox:checked'))
+                                     .map(cb => parseInt(cb.dataset.id));
+            if (selectedIds.length === 0) {
+                alert('削除する項目を選択してください。');
                 return;
             }
+
+            if (confirm(`${selectedIds.length}件の見出し語を削除してもよろしいですか？`)) {
+                deleteEntries(selectedIds);
+            }
+        }
+
+        // すべての見出し語を削除
+        async function deleteAllEntries() {
+            const confirmationText = "すべて削除";
+            const userInput = prompt(`警告：この操作は取り消せません。\nすべての見出し語と関連メディアファイルを完全に削除します。\n\n実行するには、「${confirmationText}」と入力してください。`);
             
+            if (userInput !== confirmationText) {
+                alert('確認テキストが一致しなかったため、処理を中断しました。');
+                return;
+            }
+
             try {
-                const response = await fetch(`/api/delete-entry/${entryId}`, {
-                    method: 'DELETE'
-                });
-                
+                const response = await fetch('/api/delete-all-entries', { method: 'DELETE' });
                 const result = await response.json();
-                
                 if (result.success) {
-                    alert('見出し語を削除しました。');
+                    alert('すべての見出し語が削除されました。');
                     loadAllEntries();
                 } else {
-                    alert('削除に失敗しました: ' + result.error);
+                    throw new Error(result.error);
                 }
             } catch (error) {
-                console.error('Error deleting entry:', error);
-                alert('削除中にエラーが発生しました。');
+                alert(`全件削除中にエラーが発生しました: ${error.message}`);
             }
+        }
+
+
+        // 複数IDをバックエンドに送信して削除を実行する共通関数
+        async function deleteEntries(ids) {
+            try {
+                const response = await fetch('/api/bulk-delete-entries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: ids })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`${result.deleted_count}件の見出し語を削除しました。`);
+                    loadAllEntries();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                alert(`削除中にエラーが発生しました: ${error.message}`);
+            }
+        }
+
+        // 「すべて選択」チェックボックスのロジック
+        function toggleSelectAll(masterCheckbox) {
+            const checkboxes = document.querySelectorAll('.entry-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = masterCheckbox.checked;
+            });
         }
 
         // モーダルを閉じる
-        function closeModal() {
-            document.getElementById('entry-modal').style.display = 'none';
-            currentEntryId = null;
-            tempUploadedFiles = {
-                entry: { audio: null, images: [] },
-                examples: {}
-            };
-            resetForm();
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            if (modalId === 'entry-modal') {
+                currentEntryId = null;
+                resetForm();
+            }
         }
 
         // フォームリセット
         function resetForm() {
-            document.getElementById('headword').value = '';
-            document.getElementById('kana').value = '';
-            document.getElementById('ipa').value = '';
-            document.getElementById('pos').value = '';
-            document.getElementById('verb-class').value = '';
-            document.getElementById('tone').value = '';
-            document.getElementById('etymology').value = '';
-            document.getElementById('historical-change').value = '';
+            // フォームが存在すればリセット
+            const form = document.getElementById('entry-modal').querySelector('form');
+            if (form) form.reset();
+
+            // 手動で各入力フィールドをクリア
+            const fields = ['headword', 'kana', 'ipa', 'pos', 'verb-class', 'verb-stem', 'tone', 'etymology', 'historical-change', 'entry-audio', 'entry-images'];
+            fields.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.value = '';
+            });
             
-            // ファイル入力とステータスをクリア
-            document.getElementById('entry-audio').value = '';
+            // ステータスとプレビューをクリア
             document.getElementById('entry-audio-status').innerHTML = '';
-            document.getElementById('entry-images').value = '';
             document.getElementById('entry-images-status').innerHTML = '';
             document.getElementById('entry-images-preview').innerHTML = '';
             
-            // 一時ファイルをクリア
-            tempUploadedFiles = {
-                entry: { audio: null, images: [] },
-                examples: {}
-            };
-            
-            // 動的フィールドをリセット
             resetDynamicFields();
-            
-            // タブを基本情報に戻す
             switchTab('basic');
         }
 
         // 動的フィールドのリセット
         function resetDynamicFields() {
-            // 同義語
-            document.getElementById('synonyms-container').innerHTML = `
-                <div class="dynamic-field">
-                    <input type="text" class="form-input synonym-input" placeholder="同義語">
-                    <button class="add-field-button" onclick="addSynonymField()">+</button>
-                </div>
-            `;
-            
-            // 意味
+            document.getElementById('synonyms-container').innerHTML = `<div class="dynamic-field"><input type="text" class="form-input synonym-input" placeholder="同義語"><button class="add-field-button" onclick="addSynonymField()">+</button></div>`;
             ['ja', 'zh-tw', 'en'].forEach(lang => {
-                document.getElementById(`meanings-${lang}-container`).innerHTML = `
-                    <div class="dynamic-field">
-                        <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
-                        <button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>
-                    </div>
-                `;
+                const container = document.getElementById(`meanings-${lang}-container`);
+                if(container) container.innerHTML = `<div class="dynamic-field"><input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力"><button class="add-field-button" onclick="addMeaningField('${lang}')">+</button></div>`;
             });
-            
-            // 活用形
             document.getElementById('conjugations-tbody').innerHTML = '';
-            
-            // 例文
             document.getElementById('examples-list').innerHTML = '';
         }
 
         // タブ切り替え
         function switchTab(tabName) {
-            // すべてのタブとコンテンツを非アクティブに
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('#entry-modal .tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('#entry-modal .tab-content').forEach(content => content.classList.remove('active'));
             
-            // 選択されたタブとコンテンツをアクティブに
-            document.querySelector(`.tab:nth-child(${getTabIndex(tabName)})`).classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const tabElement = document.querySelector(`#entry-modal .tab[onclick="switchTab('${tabName}')"]`);
+            const contentElement = document.getElementById(`tab-${tabName}`);
+            
+            if (tabElement) tabElement.classList.add('active');
+            if (contentElement) contentElement.classList.add('active');
         }
 
-        function getTabIndex(tabName) {
-            const tabs = ['basic', 'meanings', 'conjugations', 'examples'];
-            return tabs.indexOf(tabName) + 1;
-        }
-
-        // 動詞フィールドの表示切り替え
+        // ★★★ 新機能 ★★★
         function toggleVerbFields() {
-            const pos = document.getElementById('pos').value;
-            const verbClassGroup = document.getElementById('verb-class-group');
-            const conjugationsTab = document.querySelector('.tab:nth-child(3)');
+            const isVerb = document.getElementById('pos').value === '動詞';
+            document.querySelectorAll('.verb-only-field').forEach(el => {
+                el.style.display = isVerb ? 'block' : 'none';
+            });
             
-            if (pos === '動詞') {
-                verbClassGroup.style.display = 'block';
-                conjugationsTab.style.display = 'block';
-            } else {
-                verbClassGroup.style.display = 'none';
-                conjugationsTab.style.display = 'none';
-                document.getElementById('verb-class').value = '';
+            const conjugationsTab = document.querySelector('.tab[onclick="switchTab(\'conjugations\')"]');
+            if (conjugationsTab) {
+                 conjugationsTab.style.display = isVerb ? 'block' : 'none';
             }
         }
 
-        // 同義語フィールド追加
-        function addSynonymField() {
-            const container = document.getElementById('synonyms-container');
+        // フィールド追加・削除
+        function addSynonymField() { addDynamicField('synonyms-container', 'synonym-input', '同義語'); }
+        function addMeaningField(lang) { addDynamicField(`meanings-${lang}-container`, `meaning-${lang}-input`, '意味を入力'); }
+        function addDynamicField(containerId, inputClass, placeholder) {
+            const container = document.getElementById(containerId);
             const div = document.createElement('div');
             div.className = 'dynamic-field';
-            div.innerHTML = `
-                <input type="text" class="form-input synonym-input" placeholder="同義語">
-                <button class="remove-field-button" onclick="removeField(this)">−</button>
-            `;
+            div.innerHTML = `<input type="text" class="form-input ${inputClass}" placeholder="${placeholder}"><button class="remove-field-button" onclick="removeField(this)">−</button>`;
             container.appendChild(div);
         }
+        function removeField(button) { button.parentElement.remove(); }
 
-        // 意味フィールド追加
-        function addMeaningField(lang) {
-            const container = document.getElementById(`meanings-${lang}-container`);
-            const div = document.createElement('div');
-            div.className = 'dynamic-field';
-            div.innerHTML = `
-                <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
-                <button class="remove-field-button" onclick="removeField(this)">−</button>
-            `;
-            container.appendChild(div);
-        }
-
-        // フィールド削除
-        function removeField(button) {
-            button.parentElement.remove();
-        }
-
-        // 活用形行追加
+        // 活用形行の追加・削除
         function addConjugationRow(formName = '', conjugated = '') {
             const tbody = document.getElementById('conjugations-tbody');
             const row = tbody.insertRow();
-            row.innerHTML = `
-                <td><input type="text" class="form-input" placeholder="例：過去形" value="${formName}"></td>
-                <td><input type="text" class="form-input" placeholder="例：みだん" value="${conjugated}"></td>
-                <td><button class="remove-field-button" onclick="removeConjugationRow(this)">削除</button></td>
-            `;
+            row.innerHTML = `<td><input type="text" class="form-input" placeholder="例：過去形" value="${formName}"></td><td><input type="text" class="form-input" placeholder="例：みだん" value="${conjugated}"></td><td><button class="remove-field-button" onclick="this.closest('tr').remove()">削除</button></td>`;
         }
-
-        // 活用形行削除
-        function removeConjugationRow(button) {
-            button.closest('tr').remove();
-        }
-
-        // 例文セクション追加
+        
+        // 例文セクションの追加・削除
         function addExampleSection(example = null) {
             const container = document.getElementById('examples-list');
-            const exampleId = Date.now();
-            
             const div = document.createElement('div');
-            div.className = 'section';
-            div.style.marginBottom = '20px';
+            div.className = 'section example-section'; // クラス名で識別
+            div.dataset.id = example?.id || '';
+
+            const langNames = { ja: '日本語', 'zh-tw': '繁体中文', en: '英語' };
+            
             div.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3>例文 ${container.children.length + 1}</h3>
-                    <button class="remove-field-button" onclick="removeExampleSection(this)">削除</button>
+                    <button class="remove-field-button" onclick="this.closest('.example-section').remove()">削除</button>
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">与那国語例文</label>
-                    <input type="text" class="form-input example-yonaguni" id="example-yonaguni-${exampleId}" 
-                           value="${example ? example.yonaguni : ''}"
-                           data-example-id="${example && example.id ? example.id : ''}">
+                    <input type="text" class="form-input example-yonaguni" value="${example?.yonaguni || ''}">
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">日本語逐語訳</label>
-                    <input type="text" class="form-input example-word-by-word" id="example-wbw-ja-${exampleId}" 
-                           data-lang="ja" placeholder="単語-ごと-の-翻訳"
-                           value="${example && example.translations && example.translations.ja ? example.translations.ja.word_by_word || '' : ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">日本語意訳</label>
-                    <input type="text" class="form-input example-translation" id="example-trans-ja-${exampleId}" 
-                           data-lang="ja" value="${example && example.translations && example.translations.ja ? example.translations.ja.free_translation || '' : ''}">
-                </div>
-                
-                <hr style="margin: 15px 0;">
-                
-                <div class="form-group">
-                    <label class="form-label">繁体中文逐語訳</label>
-                    <input type="text" class="form-input example-word-by-word" id="example-wbw-zh-tw-${exampleId}" 
-                           data-lang="zh-tw" placeholder="単語-ごと-の-翻訳"
-                           value="${example && example.translations && example.translations['zh-tw'] ? example.translations['zh-tw'].word_by_word || '' : ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">繁体中文意訳</label>
-                    <input type="text" class="form-input example-translation" id="example-trans-zh-tw-${exampleId}" 
-                           data-lang="zh-tw" value="${example && example.translations && example.translations['zh-tw'] ? example.translations['zh-tw'].free_translation || '' : ''}">
-                </div>
-                
-                <hr style="margin: 15px 0;">
-                
-                <div class="form-group">
-                    <label class="form-label">英語逐語訳</label>
-                    <input type="text" class="form-input example-word-by-word" id="example-wbw-en-${exampleId}" 
-                           data-lang="en" placeholder="word-by-word-translation"
-                           value="${example && example.translations && example.translations.en ? example.translations.en.word_by_word || '' : ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">英語意訳</label>
-                    <input type="text" class="form-input example-translation" id="example-trans-en-${exampleId}" 
-                           data-lang="en" value="${example && example.translations && example.translations.en ? example.translations.en.free_translation || '' : ''}">
-                </div>
-                
-                <hr style="margin: 15px 0;">
-                
+                <!-- 各言語の翻訳フィールド -->
+                ${Object.keys(langNames).map(lang => `
+                    <div class="form-group">
+                        <label class="form-label">${langNames[lang]}翻訳</label>
+                        <input type="text" class="form-input example-word-by-word" data-lang="${lang}" placeholder="逐語訳" value="${example?.translations?.[lang]?.word_by_word || ''}">
+                        <input type="text" class="form-input example-translation" data-lang="${lang}" placeholder="意訳" style="margin-top:5px;" value="${example?.translations?.[lang]?.free_translation || ''}">
+                    </div>
+                `).join('')}
+                <!-- 音声ファイル -->
                 <div class="form-group">
                     <label class="form-label">例文の音声</label>
-                    <input type="file" accept=".mp3,.wav" onchange="handleAudioUpload(this, 'example', ${exampleId})" data-example-container="${exampleId}">
-                    <div id="example-audio-status-${exampleId}" style="margin-top: 10px;">
-                        ${example && example.audio ? `
-                            <span style="color: green;">✓ 音声ファイル: ${example.audio}</span>
-                            <button class="audio-button" onclick="playAudio('/static/media/${example.audio}')" style="margin-left: 10px;">
-                                <span class="audio-icon">🔊</span> 再生
-                            </button>
-                        ` : ''}
+                    <input type="file" class="example-audio-input" accept=".mp3,.wav">
+                    <div class="example-audio-status" style="margin-top: 10px;">
+                        ${example?.audio ? `<audio controls src="/static/media/${example.audio}"></audio>` : ''}
                     </div>
-                </div>
-            `;
-            
+                </div>`;
             container.appendChild(div);
         }
 
-        // 例文セクション削除
-        function removeExampleSection(button) {
-            button.closest('.section').remove();
-            // 例文番号を更新
-            const sections = document.querySelectorAll('#examples-list .section');
-            sections.forEach((section, index) => {
-                const title = section.querySelector('h3');
-                title.textContent = `例文 ${index + 1}`;
-            });
-        }
-
-        // 同義語設定
-        function setSynonyms(synonyms) {
-            const container = document.getElementById('synonyms-container');
-            container.innerHTML = '';
-            
-            if (synonyms.length === 0) {
-                addSynonymField();
-                return;
-            }
-            
-            synonyms.forEach((synonym, index) => {
-                const div = document.createElement('div');
-                div.className = 'dynamic-field';
-                div.innerHTML = `
-                    <input type="text" class="form-input synonym-input" placeholder="同義語" value="${synonym}">
-                    ${index === 0 ? 
-                        '<button class="add-field-button" onclick="addSynonymField()">+</button>' : 
-                        '<button class="remove-field-button" onclick="removeField(this)">−</button>'}
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // 意味設定
-        async function setMeanings(entry) {
-            // 各言語の意味を取得して設定
+        // フォーム設定用関数
+        async function setAllLanguageMeanings(entryId) {
             const languages = ['ja', 'zh-tw', 'en'];
-            
             for (const lang of languages) {
-                const response = await fetch(`/api/entry/${entry.id}?language=${lang}`);
+                const response = await fetch(`/api/entry/${entryId}?language=${lang}`);
                 const data = await response.json();
-                const meanings = data.meanings || [];
-                
                 const container = document.getElementById(`meanings-${lang}-container`);
                 container.innerHTML = '';
-                
-                if (meanings.length === 0) {
+                const meanings = data.meanings.length > 0 ? data.meanings : [{ definition: '' }];
+                meanings.forEach((m, i) => {
                     const div = document.createElement('div');
                     div.className = 'dynamic-field';
-                    div.innerHTML = `
-                        <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
-                        <button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>
-                    `;
+                    div.innerHTML = `<input type="text" class="form-input meaning-${lang}-input" value="${m.definition || ''}">
+                                     <button class="${i === 0 ? 'add-field-button' : 'remove-field-button'}" onclick="${i === 0 ? `addMeaningField('${lang}')` : 'removeField(this)'}">${i === 0 ? '+' : '−'}</button>`;
                     container.appendChild(div);
-                } else {
-                    meanings.forEach((meaning, index) => {
-                        const div = document.createElement('div');
-                        div.className = 'dynamic-field';
-                        div.innerHTML = `
-                            <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力" value="${meaning.definition}">
-                            ${index === 0 ? 
-                                `<button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>` : 
-                                '<button class="remove-field-button" onclick="removeField(this)">−</button>'}
-                        `;
-                        container.appendChild(div);
-                    });
-                }
+                });
             }
         }
+        
+        async function setAllLanguageExamples(entryId) {
+            const response = await fetch(`/api/entry/${entryId}?language=ja`); // 基準として日本語の例文リストを取得
+            const data = await response.json();
+            const examplesList = document.getElementById('examples-list');
+            examplesList.innerHTML = '';
 
-        // 活用形設定
-        function setConjugations(conjugations) {
-            const tbody = document.getElementById('conjugations-tbody');
-            tbody.innerHTML = '';
-            
-            conjugations.forEach(conj => {
-                addConjugationRow(conj.form, conj.conjugated);
-            });
-        }
-
-        // 例文設定
-        async function setExamples(examples) {
-            const container = document.getElementById('examples-list');
-            container.innerHTML = '';
-            
-            // 各言語の例文翻訳を取得
-            for (const example of examples) {
-                const exampleData = {
-                    id: example.id,
-                    yonaguni: example.yonaguni,
-                    translations: {},
-                    audio: example.audio
-                };
-                
-                // 各言語の翻訳を取得
+            for (const baseExample of data.examples) {
+                // 全言語の翻訳データを取得
+                const exampleData = { ...baseExample, translations: {} };
                 const languages = ['ja', 'zh-tw', 'en'];
                 for (const lang of languages) {
-                    const response = await fetch(`/api/entry/${currentEntryId}?language=${lang}`);
-                    const data = await response.json();
-                    const langExample = data.examples.find(ex => ex.yonaguni === example.yonaguni);
-                    
-                    if (langExample) {
-                        exampleData.translations[lang] = {
-                            word_by_word: langExample.word_by_word,
-                            free_translation: langExample.translation
-                        };
-                    }
+                     const langResponse = await fetch(`/api/entry/${entryId}?language=${lang}`);
+                     const langData = await langResponse.json();
+                     const specificExample = langData.examples.find(ex => ex.id === baseExample.id);
+                     if (specificExample) {
+                         exampleData.translations[lang] = {
+                             word_by_word: specificExample.word_by_word,
+                             free_translation: specificExample.translation
+                         };
+                     }
                 }
-                
                 addExampleSection(exampleData);
             }
         }
 
-        // 見出し語保存
+
+        function setSynonyms(synonyms) {
+            const container = document.getElementById('synonyms-container');
+            container.innerHTML = '';
+            const allSynonyms = synonyms.length > 0 ? synonyms : [''];
+            allSynonyms.forEach((s, i) => {
+                const div = document.createElement('div');
+                div.className = 'dynamic-field';
+                div.innerHTML = `<input type="text" class="form-input synonym-input" value="${s}">
+                                 <button class="${i === 0 ? 'add-field-button' : 'remove-field-button'}" onclick="${i === 0 ? 'addSynonymField()' : 'removeField(this)'}">${i === 0 ? '+' : '−'}</button>`;
+                container.appendChild(div);
+            });
+        }
+        function setConjugations(conjugations) {
+            const tbody = document.getElementById('conjugations-tbody');
+            tbody.innerHTML = '';
+            conjugations.forEach(c => addConjugationRow(c.form, c.conjugated));
+        }
+
+        // データ収集・保存
+        function collectFormData() {
+            const data = {
+                headword: document.getElementById('headword').value.trim(),
+                kana: document.getElementById('kana').value.trim(),
+                ipa: document.getElementById('ipa').value.trim(),
+                pos: document.getElementById('pos').value,
+                verb_class: document.getElementById('verb-class').value.trim(),
+                verb_stem: document.getElementById('verb-stem').value.trim(), // ★★★ 新機能 ★★★
+                tone: document.getElementById('tone').value.trim(),
+                etymology: document.getElementById('etymology').value.trim(),
+                historical_change: document.getElementById('historical-change').value.trim(),
+                synonyms: Array.from(document.querySelectorAll('.synonym-input')).map(i => i.value.trim()).filter(Boolean),
+                meanings: {
+                    'ja': Array.from(document.querySelectorAll('.meaning-ja-input')).map(i => i.value.trim()).filter(Boolean),
+                    'zh-tw': Array.from(document.querySelectorAll('.meaning-zh-tw-input')).map(i => i.value.trim()).filter(Boolean),
+                    'en': Array.from(document.querySelectorAll('.meaning-en-input')).map(i => i.value.trim()).filter(Boolean),
+                },
+                conjugations: Array.from(document.querySelectorAll('#conjugations-tbody tr')).map(row => ({
+                    form: row.cells[0].querySelector('input').value.trim(),
+                    conjugated: row.cells[1].querySelector('input').value.trim()
+                })).filter(c => c.form && c.conjugated),
+                examples: Array.from(document.querySelectorAll('.example-section')).map(section => ({
+                    id: section.dataset.id || null,
+                    yonaguni: section.querySelector('.example-yonaguni').value.trim(),
+                    translations: {
+                        'ja': { word_by_word: section.querySelector('.example-word-by-word[data-lang="ja"]').value.trim(), free_translation: section.querySelector('.example-translation[data-lang="ja"]').value.trim() },
+                        'zh-tw': { word_by_word: section.querySelector('.example-word-by-word[data-lang="zh-tw"]').value.trim(), free_translation: section.querySelector('.example-translation[data-lang="zh-tw"]').value.trim() },
+                        'en': { word_by_word: section.querySelector('.example-word-by-word[data-lang="en"]').value.trim(), free_translation: section.querySelector('.example-translation[data-lang="en"]').value.trim() },
+                    }
+                })).filter(e => e.yonaguni)
+            };
+            return data;
+        }
+
         async function saveEntry() {
             const entryData = collectFormData();
-            
             if (!entryData.headword) {
                 alert('見出し語は必須です。');
                 return;
             }
-            
+
+            const url = currentEntryId ? `/api/update-entry/${currentEntryId}` : '/api/add-entry';
+            const method = currentEntryId ? 'PUT' : 'POST';
+
             try {
-                const url = currentEntryId ? 
-                    `/api/update-entry/${currentEntryId}` : 
-                    '/api/add-entry';
-                const method = currentEntryId ? 'PUT' : 'POST';
-                
                 const response = await fetch(url, {
                     method: method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(entryData)
                 });
-                
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    const entryId = result.entry_id || currentEntryId;
-                    
-                    // 新規作成時、一時保存されたファイルをアップロード
-                    if (!currentEntryId && result.entry_id) {
-                        await uploadTempFiles(result.entry_id, entryData.examples);
-                    }
-                    
-                    alert(currentEntryId ? '見出し語を更新しました。' : '見出し語を追加しました。');
-                    closeModal();
+                    const entryId = currentEntryId || result.entry_id;
+                    await uploadAllMedia(entryId);
+                    alert('保存に成功しました。');
+                    closeModal('entry-modal');
                     loadAllEntries();
                 } else {
-                    alert('保存に失敗しました: ' + result.error);
+                    throw new Error(result.error);
                 }
             } catch (error) {
-                console.error('Error saving entry:', error);
-                alert('保存中にエラーが発生しました。');
+                console.error('Save entry error:', error);
+                alert(`保存に失敗しました: ${error.message}`);
             }
         }
+        
+        // メディアアップロード
+        async function uploadAllMedia(entryId) {
+             // 見出し語のメディア
+            const entryAudioFile = document.getElementById('entry-audio').files[0];
+            if (entryAudioFile) await uploadFile(entryAudioFile, 'audio', entryId);
+            
+            const entryImageFiles = document.getElementById('entry-images').files;
+            for(const file of entryImageFiles) await uploadFile(file, 'image', entryId);
 
-        // 一時保存されたファイルをアップロード
-        async function uploadTempFiles(entryId, examples) {
-            // 見出し語の音声をアップロード
-            if (tempUploadedFiles.entry.audio) {
-                const formData = new FormData();
-                formData.append('file', tempUploadedFiles.entry.audio);
-                formData.append('file_type', 'audio');
-                formData.append('entry_id', entryId);
-                
-                try {
-                    await fetch('/api/upload-media', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error('Error uploading entry audio:', error);
-                }
-            }
+            // 例文のメディア
+            const exampleSections = document.querySelectorAll('.example-section');
+            const updatedEntryResponse = await fetch(`/api/entry/${entryId}?language=ja`);
+            const updatedEntry = await updatedEntryResponse.json();
             
-            // 見出し語の画像をアップロード
-            for (const imageFile of tempUploadedFiles.entry.images) {
-                const formData = new FormData();
-                formData.append('file', imageFile);
-                formData.append('file_type', 'image');
-                formData.append('entry_id', entryId);
-                
-                try {
-                    await fetch('/api/upload-media', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error('Error uploading entry image:', error);
-                }
-            }
-            
-            // 例文の音声をアップロード
-            const conn = await fetch(`/api/entry/${entryId}?language=ja`);
-            const entryData = await conn.json();
-            
-            if (entryData.examples) {
-                for (let i = 0; i < entryData.examples.length; i++) {
-                    const tempExampleId = 'temp_' + Object.keys(tempUploadedFiles.examples)[i];
-                    const tempFiles = tempUploadedFiles.examples[tempExampleId];
-                    
-                    if (tempFiles && tempFiles.audio) {
-                        const formData = new FormData();
-                        formData.append('file', tempFiles.audio);
-                        formData.append('file_type', 'audio');
-                        formData.append('example_id', entryData.examples[i].id);
-                        
-                        try {
-                            await fetch('/api/upload-media', {
-                                method: 'POST',
-                                body: formData
-                            });
-                        } catch (error) {
-                            console.error('Error uploading example audio:', error);
-                        }
+            for (let i = 0; i < exampleSections.length; i++) {
+                const section = exampleSections[i];
+                const exampleFile = section.querySelector('.example-audio-input').files[0];
+                if (exampleFile) {
+                    // DBから最新の例文IDを取得
+                    const yonaguniText = section.querySelector('.example-yonaguni').value;
+                    const dbExample = updatedEntry.examples.find(ex => ex.yonaguni === yonaguniText);
+                    if (dbExample) {
+                        await uploadFile(exampleFile, 'audio', null, dbExample.id);
                     }
                 }
             }
-            
-            // 一時ファイルをクリア
-            tempUploadedFiles = {
-                entry: { audio: null, images: [] },
-                examples: {}
-            };
         }
 
-        // フォームデータ収集
-        function collectFormData() {
-            const data = {
-                headword: document.getElementById('headword').value,
-                kana: document.getElementById('kana').value,
-                ipa: document.getElementById('ipa').value,
-                pos: document.getElementById('pos').value,
-                verb_class: document.getElementById('verb-class').value,
-                tone: document.getElementById('tone').value,
-                etymology: document.getElementById('etymology').value,
-                historical_change: document.getElementById('historical-change').value,
-                synonyms: [],
-                meanings: {
-                    'ja': [],
-                    'zh-tw': [],
-                    'en': []
-                },
-                conjugations: [],
-                examples: []
-            };
-            
-            // 同義語収集
-            document.querySelectorAll('.synonym-input').forEach(input => {
-                if (input.value) {
-                    data.synonyms.push(input.value);
-                }
-            });
-            
-            // 意味収集
-            ['ja', 'zh-tw', 'en'].forEach(lang => {
-                document.querySelectorAll(`.meaning-${lang}-input`).forEach(input => {
-                    if (input.value) {
-                        data.meanings[lang].push(input.value);
-                    }
-                });
-            });
-            
-            // 活用形収集
-            const conjugationRows = document.querySelectorAll('#conjugations-tbody tr');
-            conjugationRows.forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs[0].value && inputs[1].value) {
-                    data.conjugations.push({
-                        form: inputs[0].value,
-                        conjugated: inputs[1].value
-                    });
-                }
-            });
-            
-            // 例文収集
-            const exampleSections = document.querySelectorAll('#examples-list .section');
-            exampleSections.forEach(section => {
-                const yonaguniInput = section.querySelector('.example-yonaguni');
-                if (yonaguniInput && yonaguniInput.value) {
-                    const example = {
-                        yonaguni: yonaguniInput.value,
-                        translations: {}
-                    };
-                    
-                    // 各言語の翻訳を収集
-                    ['ja', 'zh-tw', 'en'].forEach(lang => {
-                        const wbwInput = section.querySelector(`.example-word-by-word[data-lang="${lang}"]`);
-                        const transInput = section.querySelector(`.example-translation[data-lang="${lang}"]`);
-                        
-                        if (wbwInput || transInput) {
-                            example.translations[lang] = {
-                                word_by_word: wbwInput ? wbwInput.value : '',
-                                free_translation: transInput ? transInput.value : ''
-                            };
-                        }
-                    });
-                    
-                    data.examples.push(example);
-                }
-            });
-            
-            return data;
-        }
-
-        // モーダル外クリックで閉じる（確認付き）
-        window.onclick = function(event) {
-            const modal = document.getElementById('entry-modal');
-            if (event.target === modal) {
-                // 編集中のデータがあるか確認
-                if (hasUnsavedChanges()) {
-                    if (confirm('編集中のデータが失われます。本当に閉じますか？')) {
-                        closeModal();
-                    }
-                } else {
-                    closeModal();
-                }
-            }
-        }
-
-        // 未保存の変更があるかチェック
-        function hasUnsavedChanges() {
-            // 基本情報のチェック
-            if (document.getElementById('headword').value) return true;
-            if (document.getElementById('kana').value) return true;
-            if (document.getElementById('ipa').value) return true;
-            
-            // 動的フィールドのチェック
-            if (document.querySelectorAll('.synonym-input').length > 1) return true;
-            if (document.querySelectorAll('.meaning-ja-input').length > 1) return true;
-            if (document.querySelectorAll('#conjugations-tbody tr').length > 0) return true;
-            if (document.querySelectorAll('#examples-list .section').length > 0) return true;
-            
-            // 一時ファイルのチェック
-            if (tempUploadedFiles.entry.audio || tempUploadedFiles.entry.images.length > 0) return true;
-            if (Object.keys(tempUploadedFiles.examples).length > 0) return true;
-            
-            return false;
-        }
-
-        // 一時的にアップロードされたファイルを記録
-        let tempUploadedFiles = {
-            entry: { audio: null, images: [] },
-            examples: {}
-        };
-
-        // 音声ファイルのアップロード処理
-        async function handleAudioUpload(input, type, exampleId = null) {
-            const file = input.files[0];
-            if (!file) return;
-
+        async function uploadFile(file, fileType, entryId, exampleId = null) {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('file_type', 'audio');
-
-            const statusElement = type === 'entry' ? 
-                document.getElementById('entry-audio-status') : 
-                document.getElementById(`example-audio-status-${exampleId}`);
+            formData.append('file_type', fileType);
+            if (entryId) formData.append('entry_id', entryId);
+            if (exampleId) formData.append('example_id', exampleId);
             
-            statusElement.innerHTML = '<span style="color: blue;">アップロード中...</span>';
-
-            // 編集モードで例文IDがある場合は即座にアップロード
-            if (type === 'example' && currentEntryId) {
-                // 例文のIDを取得（編集モードの場合）
-                const exampleInput = document.querySelector(`#example-yonaguni-${exampleId}`);
-                if (exampleInput && exampleInput.dataset.exampleId) {
-                    formData.append('example_id', exampleInput.dataset.exampleId);
-                    
-                    try {
-                        const response = await fetch('/api/upload-media', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const result = await response.json();
-                        if (result.success) {
-                            statusElement.innerHTML = `
-                                <span style="color: green;">✓ アップロード成功: ${result.filename}</span>
-                                <button class="audio-button" onclick="playAudio('${result.filepath}')" style="margin-left: 10px;">
-                                    <span class="audio-icon">🔊</span> 再生
-                                </button>
-                            `;
-                            return;
-                        }
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                        alert('アップロードに失敗しました。');
-                        statusElement.innerHTML = '<span style="color: red;">アップロード失敗</span>';
-                        return;
-                    }
-                }
-            }
-
-            // 既存エントリの音声は即座にアップロード
-            if (type === 'entry' && currentEntryId) {
-                formData.append('entry_id', currentEntryId);
-                
-                try {
-                    const response = await fetch('/api/upload-media', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-                    if (result.success) {
-                        statusElement.innerHTML = `
-                            <span style="color: green;">✓ アップロード成功: ${result.filename}</span>
-                            <button class="audio-button" onclick="playAudio('${result.filepath}')" style="margin-left: 10px;">
-                                <span class="audio-icon">🔊</span> 再生
-                            </button>
-                        `;
-                        return;
-                    }
-                } catch (error) {
-                    console.error('Upload error:', error);
-                }
-            }
-
-            // 新規作成の場合は一時保存
-            if (!currentEntryId) {
-                if (type === 'entry') {
-                    tempUploadedFiles.entry.audio = file;
-                } else {
-                    const tempExampleId = 'temp_' + exampleId;
-                    if (!tempUploadedFiles.examples[tempExampleId]) {
-                        tempUploadedFiles.examples[tempExampleId] = {};
-                    }
-                    tempUploadedFiles.examples[tempExampleId].audio = file;
-                }
-                
-                statusElement.innerHTML = `
-                    <span style="color: green;">✓ ファイル選択済み: ${file.name}</span>
-                    <span style="color: orange;"> (保存時にアップロードされます)</span>
-                `;
+            try {
+                const response = await fetch('/api/upload-media', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('アップロードに失敗しました');
+            } catch (error) {
+                console.error(`Error uploading ${fileType}:`, error);
+                alert(`${file.name} のアップロードに失敗しました。`);
             }
         }
+        
+        // 一括導入ボタンのクリックイベント
+        function triggerBulkImport() {
+            document.getElementById('bulk-import-file').click();
+        }
 
-        // 画像ファイルのアップロード処理
-        async function handleImageUpload(input, type) {
-            const files = Array.from(input.files);
-            if (!files.length) return;
+        // ファイルが選択された時の処理
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-            const statusElement = document.getElementById('entry-images-status');
-            const previewElement = document.getElementById('entry-images-preview');
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    await processBulkImport(data);
+                } catch (error) {
+                    alert('JSONファイルの読み込みまたは解析に失敗しました。\n' + error);
+                }
+            };
+            reader.readAsText(file);
             
-            statusElement.innerHTML = '<span style="color: blue;">アップロード中...</span>';
-            previewElement.innerHTML = '';
+            // 同じファイルを選択できるようにするためvalueをクリア
+            event.target.value = '';
+        }
 
-            // 新規作成の場合は一時保存
-            if (!currentEntryId) {
-                tempUploadedFiles.entry.images = files;
-                
-                // プレビュー表示
-                files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.style.maxWidth = '100px';
-                        img.style.maxHeight = '100px';
-                        img.style.objectFit = 'contain';
-                        img.style.border = '1px solid #ddd';
-                        img.style.borderRadius = '5px';
-                        previewElement.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
+        // データをバックエンドに送信して一括導入を実行
+        async function processBulkImport(data) {
+            const modalBody = document.getElementById('import-result-body');
+            modalBody.innerHTML = '<div class="loading">処理中...</div>';
+            document.getElementById('import-result-modal').style.display = 'block';
+
+            try {
+                const response = await fetch('/api/bulk-import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
-                
-                statusElement.innerHTML = `
-                    <span style="color: green;">✓ ${files.length}個のファイル選択済み</span>
-                    <span style="color: orange;"> (保存時にアップロードされます)</span>
+                const result = await response.json();
+                displayImportResult(result);
+                loadAllEntries(); // 導入後、リストを再読み込み
+            } catch (error) {
+                modalBody.innerHTML = `<div class="alert alert-error">サーバーとの通信中にエラーが発生しました: ${error}</div>`;
+            }
+        }
+
+        // 一括導入の結果をモーダルに表示
+        function displayImportResult(result) {
+            const modalBody = document.getElementById('import-result-body');
+            let html = '';
+
+            const summaryClass = result.error_count > 0 ? 'alert-error' : 'alert-success';
+            html += `
+                <div id="import-result-summary" class="alert ${summaryClass}">
+                    <strong>処理完了</strong><br>
+                    合計: ${result.total_entries}件<br>
+                    成功: ${result.success_count}件<br>
+                    失敗: ${result.error_count}件
+                </div>`;
+
+            if (result.error_count > 0) {
+                html += `
+                    <h4>エラー詳細:</h4>
+                    <div id="import-errors-details">
                 `;
-                return;
+                result.errors.forEach(err => {
+                    html += `
+                        <div class="error-item">
+                            <p><strong>行 ${err.index} / 見出し語: ${err.headword}</strong></p>
+                            <p>エラー内容: ${err.error}</p>
+                        </div>
+                    `;
+                });
+                html += '</div>';
             }
-
-            // 既存エントリの編集時は即座にアップロード
-            let successCount = 0;
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('file_type', 'image');
-                formData.append('entry_id', currentEntryId);
-
-                try {
-                    const response = await fetch('/api/upload-media', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-                    if (result.success) {
-                        successCount++;
-                        const img = document.createElement('img');
-                        img.src = result.filepath;
-                        img.style.maxWidth = '100px';
-                        img.style.maxHeight = '100px';
-                        img.style.objectFit = 'contain';
-                        img.style.border = '1px solid #ddd';
-                        img.style.borderRadius = '5px';
-                        img.style.cursor = 'pointer';
-                        img.onclick = () => window.open(result.filepath, '_blank');
-                        previewElement.appendChild(img);
-                    }
-                } catch (error) {
-                    console.error('Upload error:', error);
-                }
-            }
-
-            statusElement.innerHTML = `
-                <span style="color: green;">✓ ${successCount}個のファイルをアップロードしました</span>
-            `;
+            modalBody.innerHTML = html;
         }
 
-        // 音声を再生
-        function playAudio(audioPath) {
-            const audio = new Audio(audioPath);
-            audio.play().catch(error => {
-                console.error('音声再生エラー:', error);
-                alert('音声ファイルの再生に失敗しました。');
-            });
-        }
     </script>
 </body>
 </html>

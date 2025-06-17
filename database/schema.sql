@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS entries (
     ipa TEXT,                              -- IPA（ローマ字）表記
     pos TEXT,                              -- 品詞（名詞、動詞など）
     verb_class TEXT,                       -- 動詞クラス（動詞のみ必要）
+    verb_stem TEXT,                        -- 動詞の語幹（動詞のみ必要）。複数はコンマ区切りで保存。
     tone TEXT,                             -- 音調
     etymology TEXT,                        -- 語源
     historical_change TEXT,                -- 歴史的音変化
