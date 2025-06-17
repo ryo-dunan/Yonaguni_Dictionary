@@ -1,10 +1,55 @@
 [
   {
-    "headword": "かい",
-    "kana": "かい",
-    "ipa": "kai",
+    "headword": "どぅなん",
+    "kana": "どぅなん",
+    "ipa": "dunan",
     "pos": "名詞",
-    "meanings": { "ja": ["太陽"] },
+    "tone": "平板型",
+    "etymology": "与那国の古称",
+    "historical_change": null,
+    "synonyms": [],
+    "meanings": {
+      "ja": ["与那国島"],
+      "zh-tw": ["與那國島"],
+      "en": ["Yonaguni Island"]
+    },
+    "conjugations": [],
+    "examples": [
+      {
+        "yonaguni": "どぅなんぬ　くとぅば",
+        "translations": {
+          "ja": {
+            "word_by_word": "与那国-の 言葉",
+            "free_translation": "与那国語"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "headword": "みぬん",
+    "kana": "みぬん",
+    "ipa": "minuŋ",
+    "pos": "動詞",
+    "verb_class": "第一類",
+    "tone": "上昇型",
+    "etymology": null,
+    "historical_change": null,
+    "synonyms": [],
+    "meanings": {
+      "ja": ["見る", "見える"],
+      "en": ["to see", "to look at"]
+    },
+    "conjugations": [
+      {
+        "form": "過去形",
+        "conjugated": "みだん"
+      },
+      {
+        "form": "否定形",
+        "conjugated": "みぬぬん"
+      }
+    ],
     "examples": []
   }
 ]

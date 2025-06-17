@@ -1,8 +1,9 @@
 # app.py - 与那国語辞典バックエンド主プログラム
 # このファイルはWebアプリケーションの核心で、すべてのHTTPリクエストとデータベース操作を処理する
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
 from flask_cors import CORS  # クロスドメインリクエストを処理
+from functools import wraps
 import sqlite3
 import json
 import os
@@ -14,6 +15,13 @@ import shutil
 app = Flask(__name__)
 # CORSを有効化し、フロントエンドのクロスドメインアクセスを許可
 CORS(app)
+
+# --- 認証設定 ---
+# セキュリティのため、このキーは複雑なランダムな文字列に変更することを強く推奨します
+app.secret_key = 'dunan-dictionary-super-secret-key' 
+ADMIN_USERNAME = 'Yngn_Jths'
+ADMIN_PASSWORD = 'Asxats!035%'
+# ---
 
 # データベースファイルパス
 DATABASE = 'database/yonaguni_dict.db'
@@ -28,6 +36,24 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大16MB
 # メディアフォルダを作成
 os.makedirs(os.path.join('static', 'media', 'audio'), exist_ok=True)
 os.makedirs(os.path.join('static', 'media', 'images'), exist_ok=True)
+
+
+# ログイン必須デコレーター
+def login_required(f):
+    """
+    このデコレーターをルートに追加すると、ログインしていないユーザーは
+    ログインページにリダイレクトされるようになります。
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            # APIリクエストの場合はJSONでエラーを返す
+            if request.path.startswith('/api/'):
+                 return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            # 通常のページアクセスの場合はログインページにリダイレクト
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def get_db_connection():
     """
@@ -53,6 +79,8 @@ def init_db():
     conn.close()
     print("データベース初期化完了！")
 
+# --- 公開ルート ---
+
 @app.route('/')
 def index():
     """
@@ -60,14 +88,6 @@ def index():
     メインHTMLページを返す
     """
     return render_template('index.html')
-
-@app.route('/admin')
-def admin():
-    """
-    管理ページルート
-    管理用HTMLページを返す
-    """
-    return render_template('admin.html')
 
 @app.route('/api/ui-translations/<language>')
 def get_ui_translations(language):
@@ -402,7 +422,45 @@ def get_entry(entry_id):
     conn.close()
     return jsonify(result)
 
+
+# --- 認証ルート ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """ログインページ"""
+    error = None
+    if request.method == 'POST':
+        if request.form['username'] == ADMIN_USERNAME and request.form['password'] == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            next_url = request.args.get('next')
+            # 安全なリダイレクト
+            return redirect(next_url or url_for('admin'))
+        else:
+            error = 'ユーザーネームまたはパスワードが正しくありません。'
+    # ログイン済みの場合は管理ページへ
+    if 'logged_in' in session:
+        return redirect(url_for('admin'))
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    """ログアウト処理"""
+    session.pop('logged_in', None)
+    return redirect(url_for('index'))
+
+# --- 管理者用ルート ---
+
+@app.route('/admin')
+@login_required
+def admin():
+    """
+    管理ページルート
+    管理用HTMLページを返す
+    """
+    return render_template('admin.html')
+
 @app.route('/api/entries')
+@login_required
 def get_all_entries():
     """
     すべての見出し語を取得（管理ページ用）
@@ -410,7 +468,6 @@ def get_all_entries():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # ★★★ 修正点 ★★★ verb_class と verb_stem を取得するよう変更
     cursor.execute('''
         SELECT e.id, e.headword, e.kana, e.pos, e.verb_class, e.verb_stem,
                m.definition
@@ -437,6 +494,7 @@ def get_all_entries():
     return jsonify({'entries': entries})
 
 @app.route('/api/add-entry', methods=['POST'])
+@login_required
 def add_entry():
     """
     新しい見出し語を追加
@@ -527,6 +585,7 @@ def add_entry():
         conn.close()
 
 @app.route('/api/update-entry/<int:entry_id>', methods=['PUT'])
+@login_required
 def update_entry(entry_id):
     """
     既存の見出し語を更新
@@ -623,6 +682,7 @@ def update_entry(entry_id):
         conn.close()
 
 @app.route('/api/bulk-delete-entries', methods=['POST'])
+@login_required
 def bulk_delete_entries():
     """
     複数の見出し語を一括で削除
@@ -653,6 +713,7 @@ def bulk_delete_entries():
         conn.close()
 
 @app.route('/api/delete-all-entries', methods=['DELETE'])
+@login_required
 def delete_all_entries():
     """
     すべての見出し語を削除
@@ -686,6 +747,7 @@ def delete_all_entries():
         conn.close()
 
 @app.route('/api/delete-entry/<int:entry_id>', methods=['DELETE'])
+@login_required
 def delete_entry(entry_id):
     """
     見出し語を削除
@@ -708,6 +770,7 @@ def delete_entry(entry_id):
         conn.close()
 
 @app.route('/api/bulk-import', methods=['POST'])
+@login_required
 def bulk_import():
     """
     JSONデータから見出し語を一括でインポートする
@@ -862,6 +925,7 @@ def generate_filename(entry_ipa, example_number=None, file_type='audio', origina
     return os.path.join(folder, filename)
 
 @app.route('/api/upload-media', methods=['POST'])
+@login_required
 def upload_media():
     """
     メディアファイル（音声・画像）をアップロード
@@ -967,6 +1031,7 @@ def upload_media():
         conn.close()
 
 @app.route('/api/delete-media/<int:media_id>', methods=['DELETE'])
+@login_required
 def delete_media(media_id):
     """
     メディアファイルを削除
@@ -1005,7 +1070,8 @@ def serve_media(filename):
     """
     メディアファイルを提供
     """
-    return send_from_directory('static/media', filename)
+    # UPLOAD_FOLDER ('static/media') からの相対パスを指定
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # メインプログラムエントリーポイント
 if __name__ == '__main__':
