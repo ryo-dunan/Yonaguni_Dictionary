@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>与那国語辞典</title>
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
     <style>
         /* グローバルスタイル設定 */
         * {
@@ -23,13 +24,28 @@
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
             padding: 20px 0;
-            text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
         }
 
         .header h1 {
             font-size: 28px;
             font-weight: 600;
+            margin: 0;
         }
 
         /* ナビゲーションバースタイル - 薄い青色 */
@@ -150,7 +166,7 @@
             margin-bottom: 20px;
         }
 
-        /* 検索ボックスと仮想キーボード */
+        /* 検索入力エリアと仮想キーボード */
         .search-input-wrapper {
             flex: 1;
             position: relative;
@@ -410,6 +426,56 @@
             line-height: 1.5;
         }
 
+        /* 音声再生ボタン */
+        .audio-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background-color: #4CA1AF;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            margin-left: 10px;
+        }
+
+        .audio-button:hover {
+            background-color: #2C8C99;
+        }
+
+        .audio-button:active {
+            transform: scale(0.95);
+        }
+
+        .audio-icon {
+            font-size: 16px;
+        }
+
+        /* 画像表示 */
+        .entry-images {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .entry-image {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .entry-image:hover {
+            transform: scale(1.05);
+        }
+
         .conjugation-table {
             width: 100%;
             border-collapse: collapse;
@@ -536,7 +602,10 @@
 <body>
     <!-- トップタイトルバー -->
     <div class="header">
-        <h1 id="dict-name">与那国語辞典</h1>
+        <div class="header-content">
+            <img src="/static/images/logo.png" alt="与那国語辞典ロゴ" class="logo" onerror="this.style.display='none'">
+            <h1 id="dict-name">与那国語辞典</h1>
+        </div>
     </div>
 
     <!-- ナビゲーションバー -->
@@ -619,6 +688,10 @@
                         <label>
                             <input type="radio" name="match-type" value="suffix">
                             <span id="match-type-suffix">後方一致</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="match-type" value="contains">
+                            <span id="match-type-contains">含む</span>
                         </label>
                     </div>
                 </div>
@@ -715,6 +788,8 @@
                 uiTranslations.match_type_prefix || '前方一致';
             document.getElementById('match-type-suffix').textContent = 
                 uiTranslations.match_type_suffix || '後方一致';
+            document.getElementById('match-type-contains').textContent = 
+                uiTranslations.match_type_contains || '含む';
             
             // 検索ボックスのプレースホルダーを更新
             document.getElementById('search-input').placeholder = 
@@ -968,6 +1043,18 @@
                 html += `<div><strong>${uiTranslations.label_tone || '音調'}:</strong> ${entry.tone}</div>`;
             }
 
+            // 見出し語の音声
+            if (entry.audio) {
+                html += `
+                    <div style="margin-top: 10px;">
+                        <button class="audio-button" onclick="playAudio('/static/media/${entry.audio}')">
+                            <span class="audio-icon">🔊</span>
+                            発音を聞く
+                        </button>
+                    </div>
+                `;
+            }
+
             html += '</div>';
 
             // 意味
@@ -985,6 +1072,17 @@
                         </div>
                     `;
                 });
+                
+                // 見出し語の画像
+                if (entry.images && entry.images.length > 0) {
+                    html += `
+                        <div class="entry-images" style="margin-top: 15px;">
+                            ${entry.images.map(img => `
+                                <img src="/static/media/${img}" class="entry-image" onclick="openImage('/static/media/${img}')" alt="見出し語画像">
+                            `).join('')}
+                        </div>
+                    `;
+                }
                 
                 html += '</div>';
             }
@@ -1060,7 +1158,14 @@
                 entry.examples.forEach(example => {
                     html += `
                         <div class="example-box">
-                            <div class="example-yonaguni">${example.yonaguni}</div>
+                            <div class="example-yonaguni">
+                                ${example.yonaguni}
+                                ${example.audio ? `
+                                    <button class="audio-button" onclick="playAudio('/static/media/${example.audio}')">
+                                        <span class="audio-icon">🔊</span>
+                                    </button>
+                                ` : ''}
+                            </div>
                             ${example.word_by_word ? `
                                 <div class="example-translation">
                                     <strong>${uiTranslations.label_word_by_word || '逐語訳'}:</strong> ${example.word_by_word}
@@ -1091,6 +1196,20 @@
             // ナビゲーションバーの状態を復元
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.querySelector('[data-page="home"]').classList.add('active');
+        }
+
+        // 音声を再生
+        function playAudio(audioPath) {
+            const audio = new Audio(audioPath);
+            audio.play().catch(error => {
+                console.error('音声再生エラー:', error);
+                alert('音声ファイルの再生に失敗しました。');
+            });
+        }
+
+        // 画像を新しいタブで開く
+        function openImage(imagePath) {
+            window.open(imagePath, '_blank');
         }
     </script>
 </body>

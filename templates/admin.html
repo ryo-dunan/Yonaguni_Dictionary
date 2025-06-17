@@ -468,6 +468,19 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="form-group">
+                    <label class="form-label">見出し語の発音</label>
+                    <input type="file" id="entry-audio" accept=".mp3,.wav" onchange="handleAudioUpload(this, 'entry')">
+                    <div id="entry-audio-status" style="margin-top: 10px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">見出し語の画像（意味を表す画像）</label>
+                    <input type="file" id="entry-images" accept=".jpg,.jpeg,.png,.gif" multiple onchange="handleImageUpload(this, 'entry')">
+                    <div id="entry-images-status" style="margin-top: 10px;"></div>
+                    <div id="entry-images-preview" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                </div>
             </div>
 
             <!-- 意味タブ -->
@@ -637,6 +650,38 @@
                 // 品詞が動詞の場合、動詞クラスフィールドを表示
                 toggleVerbFields();
                 
+                // 音声ファイルを表示
+                if (entry.audio) {
+                    document.getElementById('entry-audio-status').innerHTML = `
+                        <span style="color: green;">✓ 音声ファイル: ${entry.audio}</span>
+                        <button class="audio-button" onclick="playAudio('/static/media/${entry.audio}')" style="margin-left: 10px;">
+                            <span class="audio-icon">🔊</span> 再生
+                        </button>
+                    `;
+                }
+                
+                // 画像ファイルを表示
+                if (entry.images && entry.images.length > 0) {
+                    const previewElement = document.getElementById('entry-images-preview');
+                    const statusElement = document.getElementById('entry-images-status');
+                    
+                    statusElement.innerHTML = `<span style="color: green;">✓ ${entry.images.length}個の画像</span>`;
+                    previewElement.innerHTML = '';
+                    
+                    entry.images.forEach(img => {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = `/static/media/${img}`;
+                        imgElement.style.maxWidth = '100px';
+                        imgElement.style.maxHeight = '100px';
+                        imgElement.style.objectFit = 'contain';
+                        imgElement.style.border = '1px solid #ddd';
+                        imgElement.style.borderRadius = '5px';
+                        imgElement.style.cursor = 'pointer';
+                        imgElement.onclick = () => window.open(`/static/media/${img}`, '_blank');
+                        previewElement.appendChild(imgElement);
+                    });
+                }
+                
                 // 同義語を設定
                 setSynonyms(entry.synonyms || []);
                 
@@ -684,6 +729,11 @@
         // モーダルを閉じる
         function closeModal() {
             document.getElementById('entry-modal').style.display = 'none';
+            currentEntryId = null;
+            tempUploadedFiles = {
+                entry: { audio: null, images: [] },
+                examples: {}
+            };
             resetForm();
         }
 
@@ -697,6 +747,19 @@
             document.getElementById('tone').value = '';
             document.getElementById('etymology').value = '';
             document.getElementById('historical-change').value = '';
+            
+            // ファイル入力とステータスをクリア
+            document.getElementById('entry-audio').value = '';
+            document.getElementById('entry-audio-status').innerHTML = '';
+            document.getElementById('entry-images').value = '';
+            document.getElementById('entry-images-status').innerHTML = '';
+            document.getElementById('entry-images-preview').innerHTML = '';
+            
+            // 一時ファイルをクリア
+            tempUploadedFiles = {
+                entry: { audio: null, images: [] },
+                examples: {}
+            };
             
             // 動的フィールドをリセット
             resetDynamicFields();
@@ -826,7 +889,8 @@
                 <div class="form-group">
                     <label class="form-label">与那国語例文</label>
                     <input type="text" class="form-input example-yonaguni" id="example-yonaguni-${exampleId}" 
-                           value="${example ? example.yonaguni : ''}">
+                           value="${example ? example.yonaguni : ''}"
+                           data-example-id="${example && example.id ? example.id : ''}">
                 </div>
                 
                 <div class="form-group">
@@ -870,6 +934,21 @@
                     <label class="form-label">英語意訳</label>
                     <input type="text" class="form-input example-translation" id="example-trans-en-${exampleId}" 
                            data-lang="en" value="${example && example.translations && example.translations.en ? example.translations.en.free_translation || '' : ''}">
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                
+                <div class="form-group">
+                    <label class="form-label">例文の音声</label>
+                    <input type="file" accept=".mp3,.wav" onchange="handleAudioUpload(this, 'example', ${exampleId})" data-example-container="${exampleId}">
+                    <div id="example-audio-status-${exampleId}" style="margin-top: 10px;">
+                        ${example && example.audio ? `
+                            <span style="color: green;">✓ 音声ファイル: ${example.audio}</span>
+                            <button class="audio-button" onclick="playAudio('/static/media/${example.audio}')" style="margin-left: 10px;">
+                                <span class="audio-icon">🔊</span> 再生
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
             `;
             
@@ -965,8 +1044,10 @@
             // 各言語の例文翻訳を取得
             for (const example of examples) {
                 const exampleData = {
+                    id: example.id,
                     yonaguni: example.yonaguni,
-                    translations: {}
+                    translations: {},
+                    audio: example.audio
                 };
                 
                 // 各言語の翻訳を取得
@@ -1014,6 +1095,13 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    const entryId = result.entry_id || currentEntryId;
+                    
+                    // 新規作成時、一時保存されたファイルをアップロード
+                    if (!currentEntryId && result.entry_id) {
+                        await uploadTempFiles(result.entry_id, entryData.examples);
+                    }
+                    
                     alert(currentEntryId ? '見出し語を更新しました。' : '見出し語を追加しました。');
                     closeModal();
                     loadAllEntries();
@@ -1024,6 +1112,76 @@
                 console.error('Error saving entry:', error);
                 alert('保存中にエラーが発生しました。');
             }
+        }
+
+        // 一時保存されたファイルをアップロード
+        async function uploadTempFiles(entryId, examples) {
+            // 見出し語の音声をアップロード
+            if (tempUploadedFiles.entry.audio) {
+                const formData = new FormData();
+                formData.append('file', tempUploadedFiles.entry.audio);
+                formData.append('file_type', 'audio');
+                formData.append('entry_id', entryId);
+                
+                try {
+                    await fetch('/api/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (error) {
+                    console.error('Error uploading entry audio:', error);
+                }
+            }
+            
+            // 見出し語の画像をアップロード
+            for (const imageFile of tempUploadedFiles.entry.images) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                formData.append('file_type', 'image');
+                formData.append('entry_id', entryId);
+                
+                try {
+                    await fetch('/api/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (error) {
+                    console.error('Error uploading entry image:', error);
+                }
+            }
+            
+            // 例文の音声をアップロード
+            const conn = await fetch(`/api/entry/${entryId}?language=ja`);
+            const entryData = await conn.json();
+            
+            if (entryData.examples) {
+                for (let i = 0; i < entryData.examples.length; i++) {
+                    const tempExampleId = 'temp_' + Object.keys(tempUploadedFiles.examples)[i];
+                    const tempFiles = tempUploadedFiles.examples[tempExampleId];
+                    
+                    if (tempFiles && tempFiles.audio) {
+                        const formData = new FormData();
+                        formData.append('file', tempFiles.audio);
+                        formData.append('file_type', 'audio');
+                        formData.append('example_id', entryData.examples[i].id);
+                        
+                        try {
+                            await fetch('/api/upload-media', {
+                                method: 'POST',
+                                body: formData
+                            });
+                        } catch (error) {
+                            console.error('Error uploading example audio:', error);
+                        }
+                    }
+                }
+            }
+            
+            // 一時ファイルをクリア
+            tempUploadedFiles = {
+                entry: { audio: null, images: [] },
+                examples: {}
+            };
         }
 
         // フォームデータ収集
@@ -1105,12 +1263,221 @@
             return data;
         }
 
-        // モーダル外クリックで閉じる
+        // モーダル外クリックで閉じる（確認付き）
         window.onclick = function(event) {
             const modal = document.getElementById('entry-modal');
             if (event.target === modal) {
-                closeModal();
+                // 編集中のデータがあるか確認
+                if (hasUnsavedChanges()) {
+                    if (confirm('編集中のデータが失われます。本当に閉じますか？')) {
+                        closeModal();
+                    }
+                } else {
+                    closeModal();
+                }
             }
+        }
+
+        // 未保存の変更があるかチェック
+        function hasUnsavedChanges() {
+            // 基本情報のチェック
+            if (document.getElementById('headword').value) return true;
+            if (document.getElementById('kana').value) return true;
+            if (document.getElementById('ipa').value) return true;
+            
+            // 動的フィールドのチェック
+            if (document.querySelectorAll('.synonym-input').length > 1) return true;
+            if (document.querySelectorAll('.meaning-ja-input').length > 1) return true;
+            if (document.querySelectorAll('#conjugations-tbody tr').length > 0) return true;
+            if (document.querySelectorAll('#examples-list .section').length > 0) return true;
+            
+            // 一時ファイルのチェック
+            if (tempUploadedFiles.entry.audio || tempUploadedFiles.entry.images.length > 0) return true;
+            if (Object.keys(tempUploadedFiles.examples).length > 0) return true;
+            
+            return false;
+        }
+
+        // 一時的にアップロードされたファイルを記録
+        let tempUploadedFiles = {
+            entry: { audio: null, images: [] },
+            examples: {}
+        };
+
+        // 音声ファイルのアップロード処理
+        async function handleAudioUpload(input, type, exampleId = null) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('file_type', 'audio');
+
+            const statusElement = type === 'entry' ? 
+                document.getElementById('entry-audio-status') : 
+                document.getElementById(`example-audio-status-${exampleId}`);
+            
+            statusElement.innerHTML = '<span style="color: blue;">アップロード中...</span>';
+
+            // 編集モードで例文IDがある場合は即座にアップロード
+            if (type === 'example' && currentEntryId) {
+                // 例文のIDを取得（編集モードの場合）
+                const exampleInput = document.querySelector(`#example-yonaguni-${exampleId}`);
+                if (exampleInput && exampleInput.dataset.exampleId) {
+                    formData.append('example_id', exampleInput.dataset.exampleId);
+                    
+                    try {
+                        const response = await fetch('/api/upload-media', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+                        if (result.success) {
+                            statusElement.innerHTML = `
+                                <span style="color: green;">✓ アップロード成功: ${result.filename}</span>
+                                <button class="audio-button" onclick="playAudio('${result.filepath}')" style="margin-left: 10px;">
+                                    <span class="audio-icon">🔊</span> 再生
+                                </button>
+                            `;
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('アップロードに失敗しました。');
+                        statusElement.innerHTML = '<span style="color: red;">アップロード失敗</span>';
+                        return;
+                    }
+                }
+            }
+
+            // 既存エントリの音声は即座にアップロード
+            if (type === 'entry' && currentEntryId) {
+                formData.append('entry_id', currentEntryId);
+                
+                try {
+                    const response = await fetch('/api/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        statusElement.innerHTML = `
+                            <span style="color: green;">✓ アップロード成功: ${result.filename}</span>
+                            <button class="audio-button" onclick="playAudio('${result.filepath}')" style="margin-left: 10px;">
+                                <span class="audio-icon">🔊</span> 再生
+                            </button>
+                        `;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                }
+            }
+
+            // 新規作成の場合は一時保存
+            if (!currentEntryId) {
+                if (type === 'entry') {
+                    tempUploadedFiles.entry.audio = file;
+                } else {
+                    const tempExampleId = 'temp_' + exampleId;
+                    if (!tempUploadedFiles.examples[tempExampleId]) {
+                        tempUploadedFiles.examples[tempExampleId] = {};
+                    }
+                    tempUploadedFiles.examples[tempExampleId].audio = file;
+                }
+                
+                statusElement.innerHTML = `
+                    <span style="color: green;">✓ ファイル選択済み: ${file.name}</span>
+                    <span style="color: orange;"> (保存時にアップロードされます)</span>
+                `;
+            }
+        }
+
+        // 画像ファイルのアップロード処理
+        async function handleImageUpload(input, type) {
+            const files = Array.from(input.files);
+            if (!files.length) return;
+
+            const statusElement = document.getElementById('entry-images-status');
+            const previewElement = document.getElementById('entry-images-preview');
+            
+            statusElement.innerHTML = '<span style="color: blue;">アップロード中...</span>';
+            previewElement.innerHTML = '';
+
+            // 新規作成の場合は一時保存
+            if (!currentEntryId) {
+                tempUploadedFiles.entry.images = files;
+                
+                // プレビュー表示
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.maxWidth = '100px';
+                        img.style.maxHeight = '100px';
+                        img.style.objectFit = 'contain';
+                        img.style.border = '1px solid #ddd';
+                        img.style.borderRadius = '5px';
+                        previewElement.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                
+                statusElement.innerHTML = `
+                    <span style="color: green;">✓ ${files.length}個のファイル選択済み</span>
+                    <span style="color: orange;"> (保存時にアップロードされます)</span>
+                `;
+                return;
+            }
+
+            // 既存エントリの編集時は即座にアップロード
+            let successCount = 0;
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('file_type', 'image');
+                formData.append('entry_id', currentEntryId);
+
+                try {
+                    const response = await fetch('/api/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        successCount++;
+                        const img = document.createElement('img');
+                        img.src = result.filepath;
+                        img.style.maxWidth = '100px';
+                        img.style.maxHeight = '100px';
+                        img.style.objectFit = 'contain';
+                        img.style.border = '1px solid #ddd';
+                        img.style.borderRadius = '5px';
+                        img.style.cursor = 'pointer';
+                        img.onclick = () => window.open(result.filepath, '_blank');
+                        previewElement.appendChild(img);
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                }
+            }
+
+            statusElement.innerHTML = `
+                <span style="color: green;">✓ ${successCount}個のファイルをアップロードしました</span>
+            `;
+        }
+
+        // 音声を再生
+        function playAudio(audioPath) {
+            const audio = new Audio(audioPath);
+            audio.play().catch(error => {
+                console.error('音声再生エラー:', error);
+                alert('音声ファイルの再生に失敗しました。');
+            });
         }
     </script>
 </body>
