@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>与那国語辞典</title>
     <style>
-        /* 全局样式设置 */
+        /* グローバルスタイル設定 */
         * {
             margin: 0;
             padding: 0;
@@ -18,7 +18,7 @@
             color: #333;
         }
 
-        /* 顶部标题栏样式 - 深蓝色 */
+        /* トップタイトルバースタイル - 深い青色 */
         .header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
@@ -32,7 +32,7 @@
             font-weight: 600;
         }
 
-        /* 导航栏样式 - 浅蓝色 */
+        /* ナビゲーションバースタイル - 薄い青色 */
         .nav-bar {
             background: linear-gradient(135deg, #4CA1AF 0%, #2C8C99 100%);
             padding: 0;
@@ -78,7 +78,7 @@
             font-weight: bold;
         }
 
-        /* 语言选择器样式 */
+        /* 言語セレクタースタイル */
         .language-selector {
             display: flex;
             align-items: center;
@@ -108,14 +108,14 @@
             color: white;
         }
 
-        /* 主要内容区域 */
+        /* メインコンテンツエリア */
         .container {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        /* 搜索区域样式 */
+        /* 検索エリアスタイル */
         .search-section {
             background: white;
             padding: 30px;
@@ -124,7 +124,7 @@
             margin-top: 20px;
         }
 
-        /* 搜索方向选择 */
+        /* 検索方向選択 */
         .search-direction {
             display: flex;
             justify-content: center;
@@ -143,16 +143,24 @@
             margin-right: 8px;
         }
 
-        /* 搜索框和按钮 */
+        /* 検索ボックスとボタン */
         .search-box {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
         }
 
-        .search-input {
+        /* 検索ボックスと仮想キーボード */
+        .search-input-wrapper {
             flex: 1;
-            padding: 12px 20px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 50px 12px 20px;
             border: 2px solid #4CA1AF;
             border-radius: 25px;
             font-size: 16px;
@@ -162,6 +170,70 @@
 
         .search-input:focus {
             border-color: #2a5298;
+        }
+
+        .keyboard-icon {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            color: #4CA1AF;
+            font-size: 20px;
+            transition: color 0.3s;
+        }
+
+        .keyboard-icon:hover {
+            color: #2a5298;
+        }
+
+        /* 仮想キーボード */
+        .virtual-keyboard {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            background: white;
+            border: 2px solid #4CA1AF;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .virtual-keyboard.show {
+            display: block;
+        }
+
+        .keyboard-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .keyboard-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .keyboard-button {
+            padding: 10px 15px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+
+        .keyboard-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .keyboard-button:active {
+            background-color: #d0d0d0;
         }
 
         .search-button {
@@ -180,7 +252,7 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
-        /* 搜索选项 */
+        /* 検索オプション */
         .search-options {
             display: flex;
             justify-content: space-around;
@@ -203,7 +275,7 @@
             margin-right: 5px;
         }
 
-        /* 搜索结果区域 */
+        /* 検索結果エリア */
         .results-section {
             margin-top: 30px;
         }
@@ -251,7 +323,14 @@
             line-height: 1.5;
         }
 
-        /* 词条详情页 */
+        .result-matched-form {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin: 5px 0;
+            font-style: italic;
+        }
+
+        /* 見出し語詳細ページ */
         .entry-detail {
             background: white;
             padding: 30px;
@@ -349,7 +428,7 @@
             color: #1976d2;
         }
 
-        /* 开发中页面 */
+        /* 開発中ページ */
         .under-development {
             text-align: center;
             padding: 100px 20px;
@@ -357,7 +436,7 @@
             font-size: 24px;
         }
 
-        /* 返回按钮 */
+        /* 戻るボタン */
         .back-button {
             display: inline-block;
             padding: 10px 20px;
@@ -373,7 +452,7 @@
             background-color: #555;
         }
 
-        /* 响应式设计 */
+        /* レスポンシブデザイン */
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 24px;
@@ -415,6 +494,10 @@
                 flex-direction: column;
             }
             
+            .search-input-wrapper {
+                width: 100%;
+            }
+            
             .search-button {
                 width: 100%;
             }
@@ -430,7 +513,7 @@
             }
         }
 
-        /* 加载动画 */
+        /* ローディングアニメーション */
         .loading {
             text-align: center;
             padding: 40px;
@@ -451,12 +534,12 @@
     </style>
 </head>
 <body>
-    <!-- 顶部标题栏 -->
+    <!-- トップタイトルバー -->
     <div class="header">
         <h1 id="dict-name">与那国語辞典</h1>
     </div>
 
-    <!-- 导航栏 -->
+    <!-- ナビゲーションバー -->
     <nav class="nav-bar">
         <ul class="nav-tabs">
             <li><a href="#home" class="nav-link active" data-page="home">ホーム</a></li>
@@ -476,12 +559,12 @@
         </div>
     </nav>
 
-    <!-- 主要内容区域 -->
+    <!-- メインコンテンツエリア -->
     <div class="container" id="main-content">
-        <!-- 默认显示搜索页面 -->
+        <!-- デフォルトで検索ページを表示 -->
         <div id="home-page" class="page-content">
             <div class="search-section">
-                <!-- 搜索方向选择 -->
+                <!-- 検索方向選択 -->
                 <div class="search-direction">
                     <label>
                         <input type="radio" name="direction" value="yo_to_ja" checked>
@@ -493,18 +576,35 @@
                     </label>
                 </div>
 
-                <!-- 搜索框 -->
+                <!-- 検索ボックス -->
                 <div class="search-box">
-                    <input type="text" class="search-input" id="search-input" placeholder="検索語を入力してください">
+                    <div class="search-input-wrapper">
+                        <input type="text" class="search-input" id="search-input" placeholder="検索語を入力してください">
+                        <span class="keyboard-icon" id="keyboard-toggle">⌨</span>
+                        <!-- 仮想キーボード -->
+                        <div class="virtual-keyboard" id="virtual-keyboard">
+                            <div class="keyboard-title">与那国語特殊文字</div>
+                            <div class="keyboard-buttons">
+                                <button class="keyboard-button" data-char="か゚">か゚</button>
+                                <button class="keyboard-button" data-char="き゚">き゚</button>
+                                <button class="keyboard-button" data-char="く゚">く゚</button>
+                                <button class="keyboard-button" data-char="'">'</button>
+                            </div>
+                        </div>
+                    </div>
                     <button class="search-button" id="search-button">検索</button>
                 </div>
 
-                <!-- 搜索选项 -->
+                <!-- 検索オプション -->
                 <div class="search-options">
                     <div class="option-group">
                         <label>
                             <input type="radio" name="search-type" value="headword" checked>
                             <span id="search-type-headword">見出し語のみ</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="search-type" value="conjugation">
+                            <span id="search-type-conjugation">動詞活用形</span>
                         </label>
                         <label>
                             <input type="radio" name="search-type" value="fulltext">
@@ -524,14 +624,14 @@
                 </div>
             </div>
 
-            <!-- 搜索结果区域 -->
+            <!-- 検索結果エリア -->
             <div class="results-section" id="results-section" style="display: none;">
                 <h2 style="margin-bottom: 20px;" id="results-title">検索結果</h2>
                 <div id="results-container"></div>
             </div>
         </div>
 
-        <!-- 其他页面内容（开发中） -->
+        <!-- その他のページコンテンツ（開発中） -->
         <div id="about-language-page" class="page-content" style="display: none;">
             <div class="under-development">開発中</div>
         </div>
@@ -545,24 +645,24 @@
             <div class="under-development">開発中</div>
         </div>
 
-        <!-- 词条详情页 -->
+        <!-- 見出し語詳細ページ -->
         <div id="entry-detail-page" class="page-content" style="display: none;">
             <a href="#" class="back-button" id="back-to-results">← 検索結果に戻る</a>
             <div class="entry-detail" id="entry-detail-content">
-                <!-- 详情内容将通过JavaScript动态填充 -->
+                <!-- 詳細コンテンツはJavaScriptで動的に入力される -->
             </div>
         </div>
     </div>
 
     <script>
-        // 全局变量
-        let currentLanguage = 'ja';  // 当前界面语言
-        let uiTranslations = {};     // UI翻译文本
-        let searchResults = [];      // 搜索结果缓存
+        // グローバル変数
+        let currentLanguage = 'ja';  // 現在のインターフェース言語
+        let uiTranslations = {};     // UI翻訳テキスト
+        let searchResults = [];      // 検索結果キャッシュ
 
-        // 页面加载完成后初始化
+        // ページ読み込み完了後に初期化
         document.addEventListener('DOMContentLoaded', function() {
-            // 从localStorage获取保存的语言偏好，如果没有则默认为日语
+            // localStorageから保存された言語設定を取得、なければ日本語をデフォルトに
             currentLanguage = localStorage.getItem('preferredLanguage') || 'ja';
             document.getElementById('language-select').value = currentLanguage;
             
@@ -570,7 +670,7 @@
             setupEventListeners();
         });
 
-        // 加载UI翻译
+        // UI翻訳を読み込む
         async function loadUITranslations(language) {
             try {
                 const response = await fetch(`/api/ui-translations/${language}`);
@@ -582,15 +682,15 @@
             }
         }
 
-        // 更新UI文本
+        // UIテキストを更新
         function updateUIText() {
-            // 更新词典名称
+            // 辞典名を更新
             document.getElementById('dict-name').textContent = uiTranslations.dict_name || '与那国語辞典';
             
-            // 更新语言选择器标签
+            // 言語セレクターラベルを更新
             document.getElementById('language-label').textContent = uiTranslations.language_selector || '言語';
             
-            // 更新导航菜单
+            // ナビゲーションメニューを更新
             const navLinks = document.querySelectorAll('.nav-link');
             navLinks[0].textContent = uiTranslations.nav_home || 'ホーム';
             navLinks[1].textContent = uiTranslations.nav_about_language || '与那国語について';
@@ -598,7 +698,7 @@
             navLinks[3].textContent = uiTranslations.nav_dialect_materials || '方言資料';
             navLinks[4].textContent = uiTranslations.nav_about_dict || 'この辞典について';
             
-            // 更新搜索选项
+            // 検索オプションを更新
             document.getElementById('direction-yo-ja').textContent = 
                 uiTranslations.search_direction_yo_to_ja || '与那国語→日本語';
             document.getElementById('direction-ja-yo').textContent = 
@@ -607,6 +707,8 @@
                 uiTranslations.search_button || '検索';
             document.getElementById('search-type-headword').textContent = 
                 uiTranslations.search_type_headword || '見出し語のみ';
+            document.getElementById('search-type-conjugation').textContent = 
+                uiTranslations.search_type_conjugation || '動詞活用形';
             document.getElementById('search-type-fulltext').textContent = 
                 uiTranslations.search_type_fulltext || '例文全文検索';
             document.getElementById('match-type-prefix').textContent = 
@@ -614,100 +716,134 @@
             document.getElementById('match-type-suffix').textContent = 
                 uiTranslations.match_type_suffix || '後方一致';
             
-            // 更新搜索框占位符
+            // 検索ボックスのプレースホルダーを更新
             document.getElementById('search-input').placeholder = 
                 uiTranslations.search_placeholder || '検索語を入力してください';
             
-            // 更新返回按钮
+            // 戻るボタンを更新
             document.getElementById('back-to-results').textContent = 
                 '← ' + (uiTranslations.back_to_results || '検索結果に戻る');
             
-            // 更新开发中提示
+            // 開発中の提示を更新
             const underDevElements = document.querySelectorAll('.under-development');
             underDevElements.forEach(el => {
                 el.textContent = uiTranslations.under_development || '開発中';
             });
         }
 
-        // 根据语言更新搜索方向
+        // 言語に基づいて検索方向を更新
         function updateSearchDirection(language) {
             const directionRadios = document.querySelectorAll('input[name="direction"]');
             
-            // 如果选择与那国语界面，默认搜索方向改为与那国语到其他语言
+            // 与那国語インターフェースを選択した場合、デフォルトの検索方向を与那国語から他言語に変更
             if (language === 'yonaguni') {
                 directionRadios[0].checked = true; // yo_to_ja
             }
-            
-            // 更新搜索方向的标签文本，使其更符合当前语言
-            if (language === 'zh-tw' || language === 'en') {
-                // 对于中文和英文界面，可能需要调整搜索方向的显示
-                // 这里保持原有逻辑，但可以根据需要扩展
-            }
         }
 
-        // 设置事件监听器
+        // イベントリスナーを設定
         function setupEventListeners() {
-            // 导航切换
+            // ナビゲーション切り替え
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     switchPage(this.dataset.page);
                     
-                    // 更新活动状态
+                    // アクティブ状態を更新
                     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                     this.classList.add('active');
                 });
             });
 
-            // 语言切换
+            // 言語切り替え
             document.getElementById('language-select').addEventListener('change', function(e) {
                 currentLanguage = e.target.value;
                 localStorage.setItem('preferredLanguage', currentLanguage);
                 loadUITranslations(currentLanguage);
                 
-                // 如果当前有搜索结果，重新搜索以获取新语言的结果
+                // 検索結果が表示されている場合、新しい言語で再検索
                 if (document.getElementById('results-section').style.display !== 'none' && searchResults.length > 0) {
                     performSearch();
                 }
             });
 
-            // 搜索按钮
+            // 検索ボタン
             document.getElementById('search-button').addEventListener('click', performSearch);
             
-            // 回车键搜索
+            // Enterキーで検索
             document.getElementById('search-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     performSearch();
                 }
             });
 
-            // 返回按钮
+            // 戻るボタン
             document.getElementById('back-to-results').addEventListener('click', function(e) {
                 e.preventDefault();
                 showSearchResults();
             });
+
+            // 仮想キーボードの設定
+            setupVirtualKeyboard();
         }
 
-        // 切换页面
+        // 仮想キーボードの設定
+        function setupVirtualKeyboard() {
+            const keyboardToggle = document.getElementById('keyboard-toggle');
+            const virtualKeyboard = document.getElementById('virtual-keyboard');
+            const searchInput = document.getElementById('search-input');
+            
+            // キーボードアイコンのクリック
+            keyboardToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                virtualKeyboard.classList.toggle('show');
+            });
+            
+            // キーボードボタンのクリック
+            document.querySelectorAll('.keyboard-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const char = this.getAttribute('data-char');
+                    
+                    // 現在のカーソル位置に文字を挿入
+                    const start = searchInput.selectionStart;
+                    const end = searchInput.selectionEnd;
+                    const text = searchInput.value;
+                    
+                    searchInput.value = text.substring(0, start) + char + text.substring(end);
+                    searchInput.focus();
+                    searchInput.setSelectionRange(start + char.length, start + char.length);
+                });
+            });
+            
+            // 外側クリックで閉じる
+            document.addEventListener('click', function(e) {
+                if (!virtualKeyboard.contains(e.target) && e.target !== keyboardToggle) {
+                    virtualKeyboard.classList.remove('show');
+                }
+            });
+        }
+
+        // ページを切り替える
         function switchPage(pageName) {
-            // 隐藏所有页面
+            // すべてのページを非表示
             document.querySelectorAll('.page-content').forEach(page => {
                 page.style.display = 'none';
             });
             
-            // 显示目标页面
+            // ターゲットページを表示
             const targetPage = document.getElementById(`${pageName}-page`);
             if (targetPage) {
                 targetPage.style.display = 'block';
             }
         }
 
-        // 执行搜索
+        // 検索を実行
         async function performSearch() {
             const query = document.getElementById('search-input').value.trim();
             if (!query) return;
 
-            // 获取搜索参数
+            // 検索パラメータを取得
             const searchParams = {
                 query: query,
                 direction: document.querySelector('input[name="direction"]:checked').value,
@@ -716,12 +852,12 @@
                 language: currentLanguage
             };
 
-            // 显示加载中
+            // ローディング表示
             const resultsContainer = document.getElementById('results-container');
             resultsContainer.innerHTML = `<div class="loading">${uiTranslations.searching || '検索中'}</div>`;
             document.getElementById('results-section').style.display = 'block';
             
-            // 更新搜索结果标题
+            // 検索結果タイトルを更新
             document.getElementById('results-title').textContent = uiTranslations.search_results || '検索結果';
 
             try {
@@ -742,7 +878,7 @@
             }
         }
 
-        // 显示搜索结果
+        // 検索結果を表示
         function displaySearchResults(results) {
             const resultsContainer = document.getElementById('results-container');
             
@@ -751,25 +887,33 @@
                 return;
             }
 
-            resultsContainer.innerHTML = results.map(result => `
-                <div class="result-item" onclick="showEntryDetail(${result.id})">
-                    <div class="result-headword">${result.headword}</div>
-                    ${result.kana ? `<div class="result-kana">${result.kana}</div>` : ''}
-                    ${result.pos ? `<span class="result-pos">${result.pos}</span>` : ''}
-                    <div class="result-definition">${result.definition || ''}</div>
-                </div>
-            `).join('');
+            resultsContainer.innerHTML = results.map(result => {
+                let matchedFormHtml = '';
+                if (result.matched_form) {
+                    matchedFormHtml = `<div class="result-matched-form">（活用形: ${result.matched_form} - ${result.form_name}）</div>`;
+                }
+                
+                return `
+                    <div class="result-item" onclick="showEntryDetail(${result.id})">
+                        <div class="result-headword">${result.headword}</div>
+                        ${result.kana ? `<div class="result-kana">${result.kana}</div>` : ''}
+                        ${result.pos ? `<span class="result-pos">${result.pos}</span>` : ''}
+                        ${matchedFormHtml}
+                        <div class="result-definition">${result.definition || ''}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // 显示词条详情
+        // 見出し語詳細を表示
         async function showEntryDetail(entryId) {
-            // 切换到详情页
+            // 詳細ページに切り替え
             document.querySelectorAll('.page-content').forEach(page => {
                 page.style.display = 'none';
             });
             document.getElementById('entry-detail-page').style.display = 'block';
 
-            // 显示加载中
+            // ローディング表示
             const detailContent = document.getElementById('entry-detail-content');
             detailContent.innerHTML = `<div class="loading">${uiTranslations.loading || '読み込み中'}</div>`;
 
@@ -783,7 +927,7 @@
             }
         }
 
-        // 显示词条详细信息
+        // 見出し語詳細情報を表示
         function displayEntryDetail(entry) {
             const detailContent = document.getElementById('entry-detail-content');
             
@@ -793,7 +937,7 @@
                     <div class="entry-reading">
             `;
 
-            // 假名和IPA表记
+            // かなとIPA表記
             if (entry.kana) {
                 html += `
                     <div class="reading-item">
@@ -813,7 +957,7 @@
 
             html += '</div>';
 
-            // 词性和其他基本信息
+            // 品詞とその他の基本情報
             if (entry.pos) {
                 html += `<div><strong>${uiTranslations.label_pos || '品詞'}:</strong> ${entry.pos}</div>`;
             }
@@ -826,7 +970,7 @@
 
             html += '</div>';
 
-            // 词义
+            // 意味
             if (entry.meanings && entry.meanings.length > 0) {
                 html += `
                     <div class="entry-section">
@@ -845,7 +989,7 @@
                 html += '</div>';
             }
 
-            // 同义词
+            // 同義語
             if (entry.synonyms && entry.synonyms.length > 0) {
                 html += `
                     <div class="entry-section">
@@ -855,7 +999,7 @@
                 `;
             }
 
-            // 动词活用
+            // 動詞活用
             if (entry.conjugations && entry.conjugations.length > 0) {
                 html += `
                     <div class="entry-section">
@@ -886,7 +1030,7 @@
                 `;
             }
 
-            // 语源
+            // 語源
             if (entry.etymology) {
                 html += `
                     <div class="entry-section">
@@ -896,7 +1040,7 @@
                 `;
             }
 
-            // 历史音变
+            // 歴史的音変化
             if (entry.historical_change) {
                 html += `
                     <div class="entry-section">
@@ -906,7 +1050,7 @@
                 `;
             }
 
-            // 例句
+            // 例文
             if (entry.examples && entry.examples.length > 0) {
                 html += `
                     <div class="entry-section">
@@ -937,14 +1081,14 @@
             detailContent.innerHTML = html;
         }
 
-        // 返回搜索结果
+        // 検索結果に戻る
         function showSearchResults() {
             document.querySelectorAll('.page-content').forEach(page => {
                 page.style.display = 'none';
             });
             document.getElementById('home-page').style.display = 'block';
             
-            // 恢复导航栏状态
+            // ナビゲーションバーの状態を復元
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.querySelector('[data-page="home"]').classList.add('active');
         }

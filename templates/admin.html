@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>与那国語辞典 - 管理ページ</title>
+    <style>
+        /* 全体スタイル設定 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* ヘッダースタイル */
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #d63447 100%);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 16px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        /* ナビゲーションバー */
+        .nav-bar {
+            background-color: #333;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background-color: #555;
+            border-radius: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-link:hover {
+            background-color: #666;
+        }
+
+        /* コンテナ */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* セクションスタイル */
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #d63447;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ff6b6b;
+            padding-bottom: 10px;
+        }
+
+        /* ボタンスタイル */
+        .button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #4CA1AF 0%, #2C8C99 100%);
+            color: white;
+        }
+
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .button-success {
+            background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
+            color: white;
+        }
+
+        .button-danger {
+            background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+            color: white;
+        }
+
+        .button-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        /* フォーム要素 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            border-color: #4CA1AF;
+            outline: none;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* テーブルスタイル */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .data-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* 動的フィールド */
+        .dynamic-field {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .dynamic-field input {
+            flex: 1;
+        }
+
+        .add-field-button {
+            padding: 5px 15px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .remove-field-button {
+            padding: 5px 15px;
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .modal-close {
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        /* タブ */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+            transition: background-color 0.3s;
+        }
+
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+            color: #4CA1AF;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* アラート */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* 検索バー */
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .modal-content {
+                margin: 20px auto;
+                width: 95%;
+            }
+            
+            .dynamic-field {
+                flex-direction: column;
+            }
+            
+            .data-table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <div class="header">
+        <h1>与那国語辞典</h1>
+        <div class="subtitle">管理ページ</div>
+    </div>
+
+    <!-- ナビゲーションバー -->
+    <div class="nav-bar">
+        <a href="/" class="nav-link">辞典に戻る</a>
+        <button class="button button-primary" onclick="showAddEntryModal()">新規見出し語追加</button>
+    </div>
+
+    <!-- メインコンテナ -->
+    <div class="container">
+        <!-- 検索セクション -->
+        <div class="section">
+            <div class="section-title">見出し語検索</div>
+            <div class="search-bar">
+                <input type="text" class="search-input" id="admin-search-input" placeholder="見出し語を検索...">
+                <button class="button button-primary" onclick="searchEntries()">検索</button>
+                <button class="button button-secondary" onclick="loadAllEntries()">すべて表示</button>
+            </div>
+        </div>
+
+        <!-- 見出し語リスト -->
+        <div class="section">
+            <div class="section-title">見出し語一覧</div>
+            <div id="entries-list">
+                <div class="loading">読み込み中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 見出し語追加/編集モーダル -->
+    <div class="modal" id="entry-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">新規見出し語追加</h2>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+
+            <!-- タブ -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('basic')">基本情報</div>
+                <div class="tab" onclick="switchTab('meanings')">意味</div>
+                <div class="tab" onclick="switchTab('conjugations')">活用形</div>
+                <div class="tab" onclick="switchTab('examples')">例文</div>
+            </div>
+
+            <!-- 基本情報タブ -->
+            <div class="tab-content active" id="tab-basic">
+                <div class="form-group">
+                    <label class="form-label">見出し語 *</label>
+                    <input type="text" class="form-input" id="headword" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">かな表記</label>
+                    <input type="text" class="form-input" id="kana">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">IPA（ローマ字）表記</label>
+                    <input type="text" class="form-input" id="ipa">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">品詞</label>
+                    <select class="form-select" id="pos" onchange="toggleVerbFields()">
+                        <option value="">選択してください</option>
+                        <option value="名詞">名詞</option>
+                        <option value="動詞">動詞</option>
+                        <option value="形容詞">形容詞</option>
+                        <option value="副詞">副詞</option>
+                        <option value="助詞">助詞</option>
+                        <option value="接続詞">接続詞</option>
+                        <option value="感動詞">感動詞</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="verb-class-group" style="display: none;">
+                    <label class="form-label">動詞クラス</label>
+                    <input type="text" class="form-input" id="verb-class">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">音調</label>
+                    <input type="text" class="form-input" id="tone">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">語源</label>
+                    <textarea class="form-textarea" id="etymology"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">歴史的音変化</label>
+                    <textarea class="form-textarea" id="historical-change"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">同義語</label>
+                    <div id="synonyms-container">
+                        <div class="dynamic-field">
+                            <input type="text" class="form-input synonym-input" placeholder="同義語">
+                            <button class="add-field-button" onclick="addSynonymField()">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 意味タブ -->
+            <div class="tab-content" id="tab-meanings">
+                <div class="form-group">
+                    <label class="form-label">日本語の意味</label>
+                    <div id="meanings-ja-container">
+                        <div class="dynamic-field">
+                            <input type="text" class="form-input meaning-ja-input" placeholder="意味を入力">
+                            <button class="add-field-button" onclick="addMeaningField('ja')">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">繁体中文の意味</label>
+                    <div id="meanings-zh-tw-container">
+                        <div class="dynamic-field">
+                            <input type="text" class="form-input meaning-zh-tw-input" placeholder="意味を入力">
+                            <button class="add-field-button" onclick="addMeaningField('zh-tw')">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">英語の意味</label>
+                    <div id="meanings-en-container">
+                        <div class="dynamic-field">
+                            <input type="text" class="form-input meaning-en-input" placeholder="意味を入力">
+                            <button class="add-field-button" onclick="addMeaningField('en')">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 活用形タブ -->
+            <div class="tab-content" id="tab-conjugations">
+                <div id="conjugations-container">
+                    <div class="form-group">
+                        <label class="form-label">動詞活用形</label>
+                        <button class="button button-primary" onclick="addConjugationRow()">活用形を追加</button>
+                        <table class="data-table" id="conjugations-table" style="margin-top: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>活用形名</th>
+                                    <th>活用後の形</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conjugations-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 例文タブ -->
+            <div class="tab-content" id="tab-examples">
+                <div id="examples-container">
+                    <button class="button button-primary" onclick="addExampleSection()">例文を追加</button>
+                    <div id="examples-list" style="margin-top: 20px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ボタン -->
+            <div style="margin-top: 30px; text-align: right;">
+                <button class="button button-secondary" onclick="closeModal()">キャンセル</button>
+                <button class="button button-success" onclick="saveEntry()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let currentEntryId = null;
+        let allEntries = [];
+
+        // ページ読み込み時
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllEntries();
+        });
+
+        // すべての見出し語を読み込み
+        async function loadAllEntries() {
+            try {
+                const response = await fetch('/api/entries');
+                const data = await response.json();
+                allEntries = data.entries;
+                displayEntries(allEntries);
+            } catch (error) {
+                console.error('Error loading entries:', error);
+                document.getElementById('entries-list').innerHTML = 
+                    '<div class="alert alert-error">見出し語の読み込みに失敗しました。</div>';
+            }
+        }
+
+        // 見出し語を表示
+        function displayEntries(entries) {
+            const listContainer = document.getElementById('entries-list');
+            
+            if (entries.length === 0) {
+                listContainer.innerHTML = '<p>見出し語がありません。</p>';
+                return;
+            }
+
+            let html = '<table class="data-table">';
+            html += '<thead><tr><th>見出し語</th><th>かな</th><th>品詞</th><th>意味</th><th>操作</th></tr></thead>';
+            html += '<tbody>';
+            
+            entries.forEach(entry => {
+                html += `
+                    <tr>
+                        <td>${entry.headword}</td>
+                        <td>${entry.kana || ''}</td>
+                        <td>${entry.pos || ''}</td>
+                        <td>${entry.definition || ''}</td>
+                        <td>
+                            <button class="button button-primary" onclick="editEntry(${entry.id})">編集</button>
+                            <button class="button button-danger" onclick="deleteEntry(${entry.id})">削除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            listContainer.innerHTML = html;
+        }
+
+        // 見出し語検索
+        function searchEntries() {
+            const query = document.getElementById('admin-search-input').value.toLowerCase();
+            const filtered = allEntries.filter(entry => 
+                entry.headword.toLowerCase().includes(query) ||
+                (entry.kana && entry.kana.toLowerCase().includes(query))
+            );
+            displayEntries(filtered);
+        }
+
+        // モーダル表示
+        function showAddEntryModal() {
+            currentEntryId = null;
+            document.getElementById('modal-title').textContent = '新規見出し語追加';
+            resetForm();
+            document.getElementById('entry-modal').style.display = 'block';
+        }
+
+        // 見出し語編集
+        async function editEntry(entryId) {
+            currentEntryId = entryId;
+            document.getElementById('modal-title').textContent = '見出し語編集';
+            
+            try {
+                const response = await fetch(`/api/entry/${entryId}?language=ja`);
+                const entry = await response.json();
+                
+                // 基本情報を設定
+                document.getElementById('headword').value = entry.headword || '';
+                document.getElementById('kana').value = entry.kana || '';
+                document.getElementById('ipa').value = entry.ipa || '';
+                document.getElementById('pos').value = entry.pos || '';
+                document.getElementById('verb-class').value = entry.verb_class || '';
+                document.getElementById('tone').value = entry.tone || '';
+                document.getElementById('etymology').value = entry.etymology || '';
+                document.getElementById('historical-change').value = entry.historical_change || '';
+                
+                // 品詞が動詞の場合、動詞クラスフィールドを表示
+                toggleVerbFields();
+                
+                // 同義語を設定
+                setSynonyms(entry.synonyms || []);
+                
+                // 意味を設定
+                setMeanings(entry);
+                
+                // 活用形を設定
+                setConjugations(entry.conjugations || []);
+                
+                // 例文を設定
+                setExamples(entry.examples || []);
+                
+                document.getElementById('entry-modal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading entry:', error);
+                alert('見出し語の読み込みに失敗しました。');
+            }
+        }
+
+        // 見出し語削除
+        async function deleteEntry(entryId) {
+            if (!confirm('この見出し語を削除してもよろしいですか？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/delete-entry/${entryId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('見出し語を削除しました。');
+                    loadAllEntries();
+                } else {
+                    alert('削除に失敗しました: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting entry:', error);
+                alert('削除中にエラーが発生しました。');
+            }
+        }
+
+        // モーダルを閉じる
+        function closeModal() {
+            document.getElementById('entry-modal').style.display = 'none';
+            resetForm();
+        }
+
+        // フォームリセット
+        function resetForm() {
+            document.getElementById('headword').value = '';
+            document.getElementById('kana').value = '';
+            document.getElementById('ipa').value = '';
+            document.getElementById('pos').value = '';
+            document.getElementById('verb-class').value = '';
+            document.getElementById('tone').value = '';
+            document.getElementById('etymology').value = '';
+            document.getElementById('historical-change').value = '';
+            
+            // 動的フィールドをリセット
+            resetDynamicFields();
+            
+            // タブを基本情報に戻す
+            switchTab('basic');
+        }
+
+        // 動的フィールドのリセット
+        function resetDynamicFields() {
+            // 同義語
+            document.getElementById('synonyms-container').innerHTML = `
+                <div class="dynamic-field">
+                    <input type="text" class="form-input synonym-input" placeholder="同義語">
+                    <button class="add-field-button" onclick="addSynonymField()">+</button>
+                </div>
+            `;
+            
+            // 意味
+            ['ja', 'zh-tw', 'en'].forEach(lang => {
+                document.getElementById(`meanings-${lang}-container`).innerHTML = `
+                    <div class="dynamic-field">
+                        <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
+                        <button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>
+                    </div>
+                `;
+            });
+            
+            // 活用形
+            document.getElementById('conjugations-tbody').innerHTML = '';
+            
+            // 例文
+            document.getElementById('examples-list').innerHTML = '';
+        }
+
+        // タブ切り替え
+        function switchTab(tabName) {
+            // すべてのタブとコンテンツを非アクティブに
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 選択されたタブとコンテンツをアクティブに
+            document.querySelector(`.tab:nth-child(${getTabIndex(tabName)})`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function getTabIndex(tabName) {
+            const tabs = ['basic', 'meanings', 'conjugations', 'examples'];
+            return tabs.indexOf(tabName) + 1;
+        }
+
+        // 動詞フィールドの表示切り替え
+        function toggleVerbFields() {
+            const pos = document.getElementById('pos').value;
+            const verbClassGroup = document.getElementById('verb-class-group');
+            const conjugationsTab = document.querySelector('.tab:nth-child(3)');
+            
+            if (pos === '動詞') {
+                verbClassGroup.style.display = 'block';
+                conjugationsTab.style.display = 'block';
+            } else {
+                verbClassGroup.style.display = 'none';
+                conjugationsTab.style.display = 'none';
+                document.getElementById('verb-class').value = '';
+            }
+        }
+
+        // 同義語フィールド追加
+        function addSynonymField() {
+            const container = document.getElementById('synonyms-container');
+            const div = document.createElement('div');
+            div.className = 'dynamic-field';
+            div.innerHTML = `
+                <input type="text" class="form-input synonym-input" placeholder="同義語">
+                <button class="remove-field-button" onclick="removeField(this)">−</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // 意味フィールド追加
+        function addMeaningField(lang) {
+            const container = document.getElementById(`meanings-${lang}-container`);
+            const div = document.createElement('div');
+            div.className = 'dynamic-field';
+            div.innerHTML = `
+                <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
+                <button class="remove-field-button" onclick="removeField(this)">−</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // フィールド削除
+        function removeField(button) {
+            button.parentElement.remove();
+        }
+
+        // 活用形行追加
+        function addConjugationRow(formName = '', conjugated = '') {
+            const tbody = document.getElementById('conjugations-tbody');
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td><input type="text" class="form-input" placeholder="例：過去形" value="${formName}"></td>
+                <td><input type="text" class="form-input" placeholder="例：みだん" value="${conjugated}"></td>
+                <td><button class="remove-field-button" onclick="removeConjugationRow(this)">削除</button></td>
+            `;
+        }
+
+        // 活用形行削除
+        function removeConjugationRow(button) {
+            button.closest('tr').remove();
+        }
+
+        // 例文セクション追加
+        function addExampleSection(example = null) {
+            const container = document.getElementById('examples-list');
+            const exampleId = Date.now();
+            
+            const div = document.createElement('div');
+            div.className = 'section';
+            div.style.marginBottom = '20px';
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>例文 ${container.children.length + 1}</h3>
+                    <button class="remove-field-button" onclick="removeExampleSection(this)">削除</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">与那国語例文</label>
+                    <input type="text" class="form-input example-yonaguni" id="example-yonaguni-${exampleId}" 
+                           value="${example ? example.yonaguni : ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">日本語逐語訳</label>
+                    <input type="text" class="form-input example-word-by-word" id="example-wbw-ja-${exampleId}" 
+                           data-lang="ja" placeholder="単語-ごと-の-翻訳"
+                           value="${example && example.translations && example.translations.ja ? example.translations.ja.word_by_word || '' : ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">日本語意訳</label>
+                    <input type="text" class="form-input example-translation" id="example-trans-ja-${exampleId}" 
+                           data-lang="ja" value="${example && example.translations && example.translations.ja ? example.translations.ja.free_translation || '' : ''}">
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                
+                <div class="form-group">
+                    <label class="form-label">繁体中文逐語訳</label>
+                    <input type="text" class="form-input example-word-by-word" id="example-wbw-zh-tw-${exampleId}" 
+                           data-lang="zh-tw" placeholder="単語-ごと-の-翻訳"
+                           value="${example && example.translations && example.translations['zh-tw'] ? example.translations['zh-tw'].word_by_word || '' : ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">繁体中文意訳</label>
+                    <input type="text" class="form-input example-translation" id="example-trans-zh-tw-${exampleId}" 
+                           data-lang="zh-tw" value="${example && example.translations && example.translations['zh-tw'] ? example.translations['zh-tw'].free_translation || '' : ''}">
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                
+                <div class="form-group">
+                    <label class="form-label">英語逐語訳</label>
+                    <input type="text" class="form-input example-word-by-word" id="example-wbw-en-${exampleId}" 
+                           data-lang="en" placeholder="word-by-word-translation"
+                           value="${example && example.translations && example.translations.en ? example.translations.en.word_by_word || '' : ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">英語意訳</label>
+                    <input type="text" class="form-input example-translation" id="example-trans-en-${exampleId}" 
+                           data-lang="en" value="${example && example.translations && example.translations.en ? example.translations.en.free_translation || '' : ''}">
+                </div>
+            `;
+            
+            container.appendChild(div);
+        }
+
+        // 例文セクション削除
+        function removeExampleSection(button) {
+            button.closest('.section').remove();
+            // 例文番号を更新
+            const sections = document.querySelectorAll('#examples-list .section');
+            sections.forEach((section, index) => {
+                const title = section.querySelector('h3');
+                title.textContent = `例文 ${index + 1}`;
+            });
+        }
+
+        // 同義語設定
+        function setSynonyms(synonyms) {
+            const container = document.getElementById('synonyms-container');
+            container.innerHTML = '';
+            
+            if (synonyms.length === 0) {
+                addSynonymField();
+                return;
+            }
+            
+            synonyms.forEach((synonym, index) => {
+                const div = document.createElement('div');
+                div.className = 'dynamic-field';
+                div.innerHTML = `
+                    <input type="text" class="form-input synonym-input" placeholder="同義語" value="${synonym}">
+                    ${index === 0 ? 
+                        '<button class="add-field-button" onclick="addSynonymField()">+</button>' : 
+                        '<button class="remove-field-button" onclick="removeField(this)">−</button>'}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 意味設定
+        async function setMeanings(entry) {
+            // 各言語の意味を取得して設定
+            const languages = ['ja', 'zh-tw', 'en'];
+            
+            for (const lang of languages) {
+                const response = await fetch(`/api/entry/${entry.id}?language=${lang}`);
+                const data = await response.json();
+                const meanings = data.meanings || [];
+                
+                const container = document.getElementById(`meanings-${lang}-container`);
+                container.innerHTML = '';
+                
+                if (meanings.length === 0) {
+                    const div = document.createElement('div');
+                    div.className = 'dynamic-field';
+                    div.innerHTML = `
+                        <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力">
+                        <button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>
+                    `;
+                    container.appendChild(div);
+                } else {
+                    meanings.forEach((meaning, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'dynamic-field';
+                        div.innerHTML = `
+                            <input type="text" class="form-input meaning-${lang}-input" placeholder="意味を入力" value="${meaning.definition}">
+                            ${index === 0 ? 
+                                `<button class="add-field-button" onclick="addMeaningField('${lang}')">+</button>` : 
+                                '<button class="remove-field-button" onclick="removeField(this)">−</button>'}
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            }
+        }
+
+        // 活用形設定
+        function setConjugations(conjugations) {
+            const tbody = document.getElementById('conjugations-tbody');
+            tbody.innerHTML = '';
+            
+            conjugations.forEach(conj => {
+                addConjugationRow(conj.form, conj.conjugated);
+            });
+        }
+
+        // 例文設定
+        async function setExamples(examples) {
+            const container = document.getElementById('examples-list');
+            container.innerHTML = '';
+            
+            // 各言語の例文翻訳を取得
+            for (const example of examples) {
+                const exampleData = {
+                    yonaguni: example.yonaguni,
+                    translations: {}
+                };
+                
+                // 各言語の翻訳を取得
+                const languages = ['ja', 'zh-tw', 'en'];
+                for (const lang of languages) {
+                    const response = await fetch(`/api/entry/${currentEntryId}?language=${lang}`);
+                    const data = await response.json();
+                    const langExample = data.examples.find(ex => ex.yonaguni === example.yonaguni);
+                    
+                    if (langExample) {
+                        exampleData.translations[lang] = {
+                            word_by_word: langExample.word_by_word,
+                            free_translation: langExample.translation
+                        };
+                    }
+                }
+                
+                addExampleSection(exampleData);
+            }
+        }
+
+        // 見出し語保存
+        async function saveEntry() {
+            const entryData = collectFormData();
+            
+            if (!entryData.headword) {
+                alert('見出し語は必須です。');
+                return;
+            }
+            
+            try {
+                const url = currentEntryId ? 
+                    `/api/update-entry/${currentEntryId}` : 
+                    '/api/add-entry';
+                const method = currentEntryId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(entryData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(currentEntryId ? '見出し語を更新しました。' : '見出し語を追加しました。');
+                    closeModal();
+                    loadAllEntries();
+                } else {
+                    alert('保存に失敗しました: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error saving entry:', error);
+                alert('保存中にエラーが発生しました。');
+            }
+        }
+
+        // フォームデータ収集
+        function collectFormData() {
+            const data = {
+                headword: document.getElementById('headword').value,
+                kana: document.getElementById('kana').value,
+                ipa: document.getElementById('ipa').value,
+                pos: document.getElementById('pos').value,
+                verb_class: document.getElementById('verb-class').value,
+                tone: document.getElementById('tone').value,
+                etymology: document.getElementById('etymology').value,
+                historical_change: document.getElementById('historical-change').value,
+                synonyms: [],
+                meanings: {
+                    'ja': [],
+                    'zh-tw': [],
+                    'en': []
+                },
+                conjugations: [],
+                examples: []
+            };
+            
+            // 同義語収集
+            document.querySelectorAll('.synonym-input').forEach(input => {
+                if (input.value) {
+                    data.synonyms.push(input.value);
+                }
+            });
+            
+            // 意味収集
+            ['ja', 'zh-tw', 'en'].forEach(lang => {
+                document.querySelectorAll(`.meaning-${lang}-input`).forEach(input => {
+                    if (input.value) {
+                        data.meanings[lang].push(input.value);
+                    }
+                });
+            });
+            
+            // 活用形収集
+            const conjugationRows = document.querySelectorAll('#conjugations-tbody tr');
+            conjugationRows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0].value && inputs[1].value) {
+                    data.conjugations.push({
+                        form: inputs[0].value,
+                        conjugated: inputs[1].value
+                    });
+                }
+            });
+            
+            // 例文収集
+            const exampleSections = document.querySelectorAll('#examples-list .section');
+            exampleSections.forEach(section => {
+                const yonaguniInput = section.querySelector('.example-yonaguni');
+                if (yonaguniInput && yonaguniInput.value) {
+                    const example = {
+                        yonaguni: yonaguniInput.value,
+                        translations: {}
+                    };
+                    
+                    // 各言語の翻訳を収集
+                    ['ja', 'zh-tw', 'en'].forEach(lang => {
+                        const wbwInput = section.querySelector(`.example-word-by-word[data-lang="${lang}"]`);
+                        const transInput = section.querySelector(`.example-translation[data-lang="${lang}"]`);
+                        
+                        if (wbwInput || transInput) {
+                            example.translations[lang] = {
+                                word_by_word: wbwInput ? wbwInput.value : '',
+                                free_translation: transInput ? transInput.value : ''
+                            };
+                        }
+                    });
+                    
+                    data.examples.push(example);
+                }
+            });
+            
+            return data;
+        }
+
+        // モーダル外クリックで閉じる
+        window.onclick = function(event) {
+            const modal = document.getElementById('entry-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

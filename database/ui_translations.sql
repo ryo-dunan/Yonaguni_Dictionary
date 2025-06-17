@@ -30,7 +30,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('nav_about_language', 'en', 'About Yonaguni'),
 
 ('nav_grammar', 'ja', '文法'),
-('nav_grammar', 'yonaguni', 'ぶんぽー'),
+('nav_grammar', 'yonaguni', '文法'),
 ('nav_grammar', 'zh-tw', '文法'),
 ('nav_grammar', 'en', 'Grammar'),
 
@@ -48,7 +48,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('search_direction_yo_to_ja', 'ja', '与那国語→日本語'),
 ('search_direction_yo_to_ja', 'yonaguni', 'どぅなん→だまとぅ'),
 ('search_direction_yo_to_ja', 'zh-tw', '與那國語→中文'),
-('search_direction_yo_to_ja', 'en', 'Yonaguni→English'),
+('search_direction_yo_to_ja', 'en', 'Yonaguni→Englis'),
 
 ('search_direction_ja_to_yo', 'ja', '日本語→与那国語'),
 ('search_direction_ja_to_yo', 'yonaguni', 'だまとぅ→どぅなん'),
@@ -65,12 +65,17 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('search_button', 'zh-tw', '搜尋'),
 ('search_button', 'en', 'Search'),
 
-('search_type_headword', 'ja', '見出し語のみ'),
+('search_type_headword', 'ja', '見出語のみ'),
 ('search_type_headword', 'yonaguni', '見出語ばがい'),
 ('search_type_headword', 'zh-tw', '僅詞條'),
 ('search_type_headword', 'en', 'Headword only'),
 
-('search_type_fulltext', 'ja', '例文全文検索'),
+('search_type_conjugation', 'ja', '活用形'),
+('search_type_conjugation', 'yonaguni', '動詞ぬ かたち'),
+('search_type_conjugation', 'zh-tw', '動詞活用形'),
+('search_type_conjugation', 'en', 'Verb conjugation'),
+
+('search_type_fulltext', 'ja', '全文検索'),
 ('search_type_fulltext', 'yonaguni', 'ぶーる'),
 ('search_type_fulltext', 'zh-tw', '全文搜尋'),
 ('search_type_fulltext', 'en', 'Full text search'),
@@ -108,7 +113,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 
 -- 开发中提示
 ('under_development', 'ja', '開発中'),
-('under_development', 'yonaguni', 'くいどぅ ぶる'),
+('under_development', 'yonaguni', 'ないどぅ くい ぶる'),
 ('under_development', 'zh-tw', '開發中'),
 ('under_development', 'en', 'Under Development'),
 
@@ -149,7 +154,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('label_synonyms', 'en', 'Synonyms'),
 
 ('label_conjugation', 'ja', '活用形'),
-('label_conjugation', 'yonaguni', '活用'),
+('label_conjugation', 'yonaguni', 'かたち'),
 ('label_conjugation', 'zh-tw', '活用形'),
 ('label_conjugation', 'en', 'Conjugation'),
 
@@ -161,7 +166,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('label_historical_change', 'ja', '音変化'),
 ('label_historical_change', 'yonaguni', '音変化'),
 ('label_historical_change', 'zh-tw', '歷史音變'),
-('label_historical_change', 'en', 'Historical Change'),
+('label_historical_change', 'en', 'Historical Sound Change'),
 
 ('label_examples', 'ja', '例文'),
 ('label_examples', 'yonaguni', '例文'),
@@ -180,8 +185,8 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 
 -- 返回按钮
 ('back_to_results', 'ja', '検索結果に戻る'),
-('back_to_results', 'yonaguni', 'みきゃる むぬんき むどぅるん'),
-('back_to_results', 'zh-tw', '返回搜尋結果'),
+('back_to_results', 'yonaguni', 'もどぅる'),
+('back_to_results', 'zh-tw', 'むどぅるん'),
 ('back_to_results', 'en', 'Back to Results'),
 
 -- 错误信息
@@ -197,7 +202,7 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 
 -- 动词活用表头
 ('conjugation_form', 'ja', '活用形'),
-('conjugation_form', 'yonaguni', 'いるいるぬ かたち'),
+('conjugation_form', 'yonaguni', 'かたち'),
 ('conjugation_form', 'zh-tw', '活用形式'),
 ('conjugation_form', 'en', 'Form'),
 

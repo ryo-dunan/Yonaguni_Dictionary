@@ -1,96 +1,98 @@
--- 与那国语词典数据库设计
--- 这个SQL文件用于创建数据库表结构
+-- 与那国語辞典データベース設計
+-- このSQLファイルはデータベーステーブル構造を作成するために使用される
 
--- 1. 词条主表
+-- 1. 見出し語主テーブル
 CREATE TABLE IF NOT EXISTS entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- 自动递增的主键
-    headword TEXT NOT NULL,                -- 见出语（与那国语原文）
-    kana TEXT,                             -- 假名表记
-    ipa TEXT,                              -- IPA（罗马字）表记
-    pos TEXT,                              -- 品词（名词、动词等）
-    verb_class TEXT,                       -- 动词类别（仅动词需要）
-    tone TEXT,                             -- 音调
-    etymology TEXT,                        -- 语源
-    historical_change TEXT,                -- 历史音变
+    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- 自動増加の主キー
+    headword TEXT NOT NULL,                -- 見出し語（与那国語原文）
+    kana TEXT,                             -- かな表記
+    ipa TEXT,                              -- IPA（ローマ字）表記
+    pos TEXT,                              -- 品詞（名詞、動詞など）
+    verb_class TEXT,                       -- 動詞クラス（動詞のみ必要）
+    tone TEXT,                             -- 音調
+    etymology TEXT,                        -- 語源
+    historical_change TEXT,                -- 歴史的音変化
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. 词义表（支持多语言和多义词）
+-- 2. 意味テーブル（多言語と多義語対応）
 CREATE TABLE IF NOT EXISTS meanings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id INTEGER NOT NULL,             -- 关联到entries表
-    language TEXT NOT NULL,                -- 语言代码：ja, zh-tw, en
-    meaning_number INTEGER DEFAULT 1,      -- 义项编号（支持多义词）
-    definition TEXT NOT NULL,              -- 词义解释
+    entry_id INTEGER NOT NULL,             -- entriesテーブルへの関連
+    language TEXT NOT NULL,                -- 言語コード：ja, zh-tw, en
+    meaning_number INTEGER DEFAULT 1,      -- 義項番号（多義語対応）
+    definition TEXT NOT NULL,              -- 意味の説明
     FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
 );
 
--- 3. 同义词表
+-- 3. 同義語テーブル
 CREATE TABLE IF NOT EXISTS synonyms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
-    synonym TEXT NOT NULL,                 -- 同义词
+    synonym TEXT NOT NULL,                 -- 同義語
     FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
 );
 
--- 4. 动词活用表
+-- 4. 動詞活用テーブル
 CREATE TABLE IF NOT EXISTS conjugations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
-    form_name TEXT NOT NULL,               -- 活用形式名称（如：过去式、否定式等）
-    conjugated_form TEXT NOT NULL,         -- 活用后的形式
+    form_name TEXT NOT NULL,               -- 活用形式名（例：過去形、否定形など）
+    conjugated_form TEXT NOT NULL,         -- 活用後の形式
     FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
 );
 
--- 5. 例句表
+-- 5. 例文テーブル
 CREATE TABLE IF NOT EXISTS examples (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
-    yonaguni_sentence TEXT NOT NULL,       -- 与那国语例句
+    yonaguni_sentence TEXT NOT NULL,       -- 与那国語例文
     FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
 );
 
--- 6. 例句翻译表（支持多语言）
+-- 6. 例文翻訳テーブル（多言語対応）
 CREATE TABLE IF NOT EXISTS example_translations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     example_id INTEGER NOT NULL,
-    language TEXT NOT NULL,                -- 语言代码
-    word_by_word TEXT,                     -- 逐语译
-    free_translation TEXT,                 -- 意译
+    language TEXT NOT NULL,                -- 言語コード
+    word_by_word TEXT,                     -- 逐語訳
+    free_translation TEXT,                 -- 意訳
     FOREIGN KEY (example_id) REFERENCES examples(id) ON DELETE CASCADE
 );
 
--- 7. 界面翻译表（用于存储UI文本的多语言版本）
+-- 7. インターフェース翻訳テーブル（UI文字列の多言語版を保存）
 CREATE TABLE IF NOT EXISTS ui_translations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT NOT NULL,                     -- 翻译键（如：dict_name, search_button等）
-    language TEXT NOT NULL,                -- 语言代码
-    translation TEXT NOT NULL,             -- 翻译文本
-    UNIQUE(key, language)                  -- 确保每个键+语言组合唯一
+    key TEXT NOT NULL,                     -- 翻訳キー（例：dict_name, search_buttonなど）
+    language TEXT NOT NULL,                -- 言語コード
+    translation TEXT NOT NULL,             -- 翻訳テキスト
+    UNIQUE(key, language)                  -- 各キー+言語の組み合わせが一意であることを保証
 );
 
--- 创建索引以提高查询性能
+-- クエリ性能を向上させるためのインデックスを作成
 CREATE INDEX idx_entries_headword ON entries(headword);
 CREATE INDEX idx_entries_kana ON entries(kana);
 CREATE INDEX idx_meanings_entry_id ON meanings(entry_id);
 CREATE INDEX idx_meanings_language ON meanings(language);
 CREATE INDEX idx_examples_entry_id ON examples(entry_id);
+CREATE INDEX idx_conjugations_entry_id ON conjugations(entry_id);
+CREATE INDEX idx_conjugations_form ON conjugations(conjugated_form);
 
--- 插入UI翻译示例数据
+-- UI翻訳サンプルデータを挿入
 INSERT INTO ui_translations (key, language, translation) VALUES
--- 词典名称
+-- 辞典名
 ('dict_name', 'ja', '与那国語辞典'),
 ('dict_name', 'yonaguni', 'どぅなんむぬい辞典'),
 ('dict_name', 'zh-tw', '與那國語詞典'),
 ('dict_name', 'en', 'Yonaguni Dictionary'),
--- 导航菜单
+-- ナビゲーションメニュー
 ('nav_home', 'ja', 'ホーム'),
 ('nav_about_language', 'ja', '与那国語について'),
 ('nav_grammar', 'ja', '文法'),
 ('nav_dialect_materials', 'ja', '方言資料'),
 ('nav_about_dict', 'ja', 'この辞典について'),
--- 搜索选项
+-- 検索オプション
 ('search_direction_ja_to_yo', 'ja', '日本語→与那国語'),
 ('search_direction_yo_to_ja', 'ja', '与那国語→日本語'),
 ('search_button', 'ja', '検索'),
@@ -98,9 +100,9 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('search_type_fulltext', 'ja', '例文全文検索'),
 ('match_type_prefix', 'ja', '前方一致'),
 ('match_type_suffix', 'ja', '後方一致'),
--- 开发中提示
+-- 開発中の提示
 ('under_development', 'ja', '開発中'),
--- 词条详情页标签
+-- 見出し語詳細ページラベル
 ('label_kana', 'ja', 'かな表記'),
 ('label_ipa', 'ja', 'IPA表記'),
 ('label_pos', 'ja', '品詞'),
@@ -115,12 +117,12 @@ INSERT INTO ui_translations (key, language, translation) VALUES
 ('label_word_by_word', 'ja', '逐語訳'),
 ('label_free_translation', 'ja', '意訳');
 
--- 插入测试词条数据
+-- テスト見出し語データを挿入
 INSERT INTO entries (headword, kana, ipa, pos, tone, etymology) VALUES
 ('どぅなん', 'どぅなん', 'dunan', '名詞', '平板型', '与那国の古称'),
 ('あがる', 'あがる', 'agaru', '動詞', '上昇型', '日本語「上がる」から');
 
--- 插入词义
+-- 意味を挿入
 INSERT INTO meanings (entry_id, language, meaning_number, definition) VALUES
 (1, 'ja', 1, '与那国島'),
 (1, 'zh-tw', 1, '與那國島'),
@@ -128,12 +130,12 @@ INSERT INTO meanings (entry_id, language, meaning_number, definition) VALUES
 (2, 'ja', 1, '上がる、登る'),
 (2, 'ja', 2, '（太陽が）昇る');
 
--- 插入例句
+-- 例文を挿入
 INSERT INTO examples (entry_id, yonaguni_sentence) VALUES
 (1, 'どぅなんぬ　くとぅば'),
 (2, 'てぃだぬ　あがたん');
 
--- 插入例句翻译
+-- 例文翻訳を挿入
 INSERT INTO example_translations (example_id, language, word_by_word, free_translation) VALUES
 (1, 'ja', '与那国-の　言葉', '与那国の言葉'),
 (2, 'ja', '太陽-が　上がった', '太陽が昇った');

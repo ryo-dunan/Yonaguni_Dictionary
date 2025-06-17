@@ -1,34 +1,34 @@
-# app.py - 与那国语词典后端主程序
-# 这个文件是整个Web应用的核心，处理所有的HTTP请求和数据库操作
+# app.py - 与那国語辞典バックエンド主プログラム
+# このファイルはWebアプリケーションの核心で、すべてのHTTPリクエストとデータベース操作を処理する
 
 from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS  # 处理跨域请求
+from flask_cors import CORS  # クロスドメインリクエストを処理
 import sqlite3
 import json
 from datetime import datetime
 
-# 创建Flask应用实例
+# Flaskアプリケーションインスタンスを作成
 app = Flask(__name__)
-# 启用CORS，允许前端跨域访问
+# CORSを有効化し、フロントエンドのクロスドメインアクセスを許可
 CORS(app)
 
-# 数据库文件路径
+# データベースファイルパス
 DATABASE = 'database/yonaguni_dict.db'
 
 def get_db_connection():
     """
-    创建并返回数据库连接
-    每次需要访问数据库时调用此函数
+    データベース接続を作成して返す
+    データベースにアクセスする必要があるたびにこの関数を呼び出す
     """
     conn = sqlite3.connect(DATABASE)
-    # 设置row_factory，使查询结果可以像字典一样访问
+    # row_factoryを設定し、クエリ結果を辞書のようにアクセスできるようにする
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     """
-    初始化数据库
-    读取SQL文件并执行，创建所有必要的表
+    データベースを初期化
+    SQLファイルを読み込んで実行し、必要なテーブルをすべて作成
     """
     with open('database/schema.sql', 'r', encoding='utf-8') as f:
         sql_script = f.read()
@@ -37,34 +37,42 @@ def init_db():
     conn.executescript(sql_script)
     conn.commit()
     conn.close()
-    print("数据库初始化完成！")
+    print("データベース初期化完了！")
 
 @app.route('/')
 def index():
     """
-    主页路由
-    返回主HTML页面
+    メインページルート
+    メインHTMLページを返す
     """
     return render_template('index.html')
+
+@app.route('/admin')
+def admin():
+    """
+    管理ページルート
+    管理用HTMLページを返す
+    """
+    return render_template('admin.html')
 
 @app.route('/api/ui-translations/<language>')
 def get_ui_translations(language):
     """
-    获取指定语言的UI翻译
-    参数：language - 语言代码（ja, zh-tw, en, yonaguni）
-    返回：JSON格式的翻译键值对
+    指定言語のUI翻訳を取得
+    パラメータ：language - 言語コード（ja, zh-tw, en, yonaguni）
+    戻り値：JSON形式の翻訳キーと値のペア
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 查询指定语言的所有UI翻译
+    # 指定言語のすべてのUI翻訳をクエリ
     cursor.execute('''
         SELECT key, translation 
         FROM ui_translations 
         WHERE language = ?
     ''', (language,))
     
-    # 将结果转换为字典格式
+    # 結果を辞書形式に変換
     translations = {}
     for row in cursor.fetchall():
         translations[row['key']] = row['translation']
@@ -75,30 +83,30 @@ def get_ui_translations(language):
 @app.route('/api/search', methods=['POST'])
 def search():
     """
-    搜索API端点
-    接收搜索参数，返回匹配的词条列表
+    検索APIエンドポイント
+    検索パラメータを受け取り、マッチする見出し語リストを返す
     """
-    # 获取请求参数
+    # リクエストパラメータを取得
     data = request.json
-    query = data.get('query', '')  # 搜索关键词
-    search_type = data.get('search_type', 'headword')  # 搜索类型：headword或fulltext
-    match_type = data.get('match_type', 'prefix')  # 匹配类型：prefix或suffix
-    direction = data.get('direction', 'yo_to_ja')  # 搜索方向
-    language = data.get('language', 'ja')  # 界面语言
+    query = data.get('query', '')  # 検索キーワード
+    search_type = data.get('search_type', 'headword')  # 検索タイプ：headword、fulltext、conjugation
+    match_type = data.get('match_type', 'prefix')  # マッチタイプ：prefix または suffix
+    direction = data.get('direction', 'yo_to_ja')  # 検索方向
+    language = data.get('language', 'ja')  # インターフェース言語
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
     results = []
     
-    # 根据界面语言调整搜索结果语言
-    # 如果界面是与那国语，优先显示日语释义
+    # インターフェース言語に基づいて検索結果言語を調整
+    # インターフェースが与那国語の場合、日本語の釈義を優先表示
     result_language = 'ja' if language == 'yonaguni' else language
     
     if search_type == 'headword':
-        # 见出语搜索
+        # 見出し語検索
         if direction == 'yo_to_ja':
-            # 与那国语到其他语言
+            # 与那国語から他言語へ
             if match_type == 'prefix':
                 # 前方一致
                 cursor.execute('''
@@ -113,7 +121,7 @@ def search():
                     LIMIT 50
                 ''', (query + '%', query + '%', result_language))
             else:
-                # 后方一致
+                # 後方一致
                 cursor.execute('''
                     SELECT DISTINCT e.id, e.headword, e.kana, e.pos,
                            m.definition
@@ -126,7 +134,7 @@ def search():
                     LIMIT 50
                 ''', ('%' + query, '%' + query, result_language))
         else:
-            # 其他语言到与那国语
+            # 他言語から与那国語へ
             if match_type == 'prefix':
                 cursor.execute('''
                     SELECT DISTINCT e.id, e.headword, e.kana, e.pos,
@@ -150,8 +158,37 @@ def search():
                     LIMIT 50
                 ''', ('%' + query, result_language))
     
+    elif search_type == 'conjugation':
+        # 動詞活用形検索
+        if match_type == 'prefix':
+            cursor.execute('''
+                SELECT DISTINCT e.id, e.headword, e.kana, e.pos,
+                       m.definition, c.form_name, c.conjugated_form
+                FROM entries e
+                JOIN conjugations c ON e.id = c.entry_id
+                LEFT JOIN meanings m ON e.id = m.entry_id
+                WHERE c.conjugated_form LIKE ?
+                AND m.language = ?
+                AND m.meaning_number = 1
+                ORDER BY e.headword
+                LIMIT 50
+            ''', (query + '%', result_language))
+        else:
+            cursor.execute('''
+                SELECT DISTINCT e.id, e.headword, e.kana, e.pos,
+                       m.definition, c.form_name, c.conjugated_form
+                FROM entries e
+                JOIN conjugations c ON e.id = c.entry_id
+                LEFT JOIN meanings m ON e.id = m.entry_id
+                WHERE c.conjugated_form LIKE ?
+                AND m.language = ?
+                AND m.meaning_number = 1
+                ORDER BY e.headword
+                LIMIT 50
+            ''', ('%' + query, result_language))
+    
     else:
-        # 全文搜索（包括例句）
+        # 全文検索（例文を含む）
         cursor.execute('''
             SELECT DISTINCT e.id, e.headword, e.kana, e.pos,
                    m.definition, ex.yonaguni_sentence
@@ -169,18 +206,23 @@ def search():
         ''', ('%' + query + '%', '%' + query + '%', 
              '%' + query + '%', '%' + query + '%', result_language))
     
-    # 格式化搜索结果
-    seen_ids = set()  # 用于去重
+    # 検索結果をフォーマット
+    seen_ids = set()  # 重複除去用
     for row in cursor.fetchall():
         if row['id'] not in seen_ids:
             seen_ids.add(row['id'])
-            results.append({
+            result_item = {
                 'id': row['id'],
                 'headword': row['headword'],
                 'kana': row['kana'],
                 'pos': row['pos'],
                 'definition': row['definition']
-            })
+            }
+            # 活用形検索の場合、マッチした活用形も含める
+            if search_type == 'conjugation' and 'conjugated_form' in row.keys():
+                result_item['matched_form'] = row['conjugated_form']
+                result_item['form_name'] = row['form_name']
+            results.append(result_item)
     
     conn.close()
     return jsonify({'results': results})
@@ -188,18 +230,18 @@ def search():
 @app.route('/api/entry/<int:entry_id>')
 def get_entry(entry_id):
     """
-    获取单个词条的详细信息
-    参数：entry_id - 词条ID
-    返回：包含词条所有信息的JSON对象
+    単一の見出し語の詳細情報を取得
+    パラメータ：entry_id - 見出し語ID
+    戻り値：見出し語のすべての情報を含むJSONオブジェクト
     """
     language = request.args.get('language', 'ja')
-    # 如果界面语言是与那国语，使用日语显示释义
+    # インターフェース言語が与那国語の場合、日本語で釈義を表示
     display_language = 'ja' if language == 'yonaguni' else language
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 获取词条基本信息
+    # 見出し語の基本情報を取得
     cursor.execute('SELECT * FROM entries WHERE id = ?', (entry_id,))
     entry = cursor.fetchone()
     
@@ -207,7 +249,7 @@ def get_entry(entry_id):
         conn.close()
         return jsonify({'error': 'Entry not found'}), 404
     
-    # 构建响应数据
+    # レスポンスデータを構築
     result = {
         'id': entry['id'],
         'headword': entry['headword'],
@@ -220,7 +262,7 @@ def get_entry(entry_id):
         'historical_change': entry['historical_change']
     }
     
-    # 获取词义（支持多义词）
+    # 意味を取得（多義語対応）
     cursor.execute('''
         SELECT meaning_number, definition 
         FROM meanings 
@@ -231,11 +273,11 @@ def get_entry(entry_id):
                           'definition': row['definition']} 
                          for row in cursor.fetchall()]
     
-    # 获取同义词
+    # 同義語を取得
     cursor.execute('SELECT synonym FROM synonyms WHERE entry_id = ?', (entry_id,))
     result['synonyms'] = [row['synonym'] for row in cursor.fetchall()]
     
-    # 获取动词活用（如果是动词）
+    # 動詞活用を取得（動詞の場合）
     if entry['pos'] == '動詞':
         cursor.execute('''
             SELECT form_name, conjugated_form 
@@ -246,7 +288,7 @@ def get_entry(entry_id):
                                   'conjugated': row['conjugated_form']} 
                                  for row in cursor.fetchall()]
     
-    # 获取例句和翻译
+    # 例文と翻訳を取得
     cursor.execute('''
         SELECT ex.id, ex.yonaguni_sentence,
                et.word_by_word, et.free_translation
@@ -267,11 +309,42 @@ def get_entry(entry_id):
     conn.close()
     return jsonify(result)
 
+@app.route('/api/entries')
+def get_all_entries():
+    """
+    すべての見出し語を取得（管理ページ用）
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT e.id, e.headword, e.kana, e.pos,
+               GROUP_CONCAT(m.definition, '、') as definitions
+        FROM entries e
+        LEFT JOIN meanings m ON e.id = m.entry_id
+        WHERE m.language = 'ja' AND m.meaning_number = 1
+        GROUP BY e.id
+        ORDER BY e.headword
+    ''')
+    
+    entries = []
+    for row in cursor.fetchall():
+        entries.append({
+            'id': row['id'],
+            'headword': row['headword'],
+            'kana': row['kana'],
+            'pos': row['pos'],
+            'definition': row['definitions']
+        })
+    
+    conn.close()
+    return jsonify({'entries': entries})
+
 @app.route('/api/add-entry', methods=['POST'])
 def add_entry():
     """
-    添加新词条
-    接收JSON格式的词条数据，插入数据库
+    新しい見出し語を追加
+    JSON形式の見出し語データを受け取り、データベースに挿入
     """
     data = request.json
     
@@ -279,10 +352,10 @@ def add_entry():
     cursor = conn.cursor()
     
     try:
-        # 开始事务
+        # トランザクション開始
         conn.execute('BEGIN')
         
-        # 插入词条基本信息
+        # 見出し語の基本情報を挿入
         cursor.execute('''
             INSERT INTO entries 
             (headword, kana, ipa, pos, verb_class, tone, etymology, historical_change)
@@ -300,7 +373,7 @@ def add_entry():
         
         entry_id = cursor.lastrowid
         
-        # 插入词义（支持多语言）
+        # 意味を挿入（多言語対応）
         for lang_code, meanings in data.get('meanings', {}).items():
             for i, meaning in enumerate(meanings, 1):
                 cursor.execute('''
@@ -309,14 +382,14 @@ def add_entry():
                     VALUES (?, ?, ?, ?)
                 ''', (entry_id, lang_code, i, meaning))
         
-        # 插入同义词
+        # 同義語を挿入
         for synonym in data.get('synonyms', []):
             cursor.execute('''
                 INSERT INTO synonyms (entry_id, synonym)
                 VALUES (?, ?)
             ''', (entry_id, synonym))
         
-        # 插入动词活用
+        # 動詞活用を挿入
         for conjugation in data.get('conjugations', []):
             cursor.execute('''
                 INSERT INTO conjugations 
@@ -324,7 +397,7 @@ def add_entry():
                 VALUES (?, ?, ?)
             ''', (entry_id, conjugation['form'], conjugation['conjugated']))
         
-        # 插入例句
+        # 例文を挿入
         for example in data.get('examples', []):
             cursor.execute('''
                 INSERT INTO examples (entry_id, yonaguni_sentence)
@@ -333,7 +406,7 @@ def add_entry():
             
             example_id = cursor.lastrowid
             
-            # 插入例句翻译
+            # 例文翻訳を挿入
             for lang_code, translation in example.get('translations', {}).items():
                 cursor.execute('''
                     INSERT INTO example_translations 
@@ -343,25 +416,142 @@ def add_entry():
                       translation.get('word_by_word'), 
                       translation.get('free_translation')))
         
-        # 提交事务
+        # トランザクションをコミット
         conn.commit()
         
         return jsonify({'success': True, 'entry_id': entry_id})
         
     except Exception as e:
-        # 发生错误时回滚
+        # エラー発生時はロールバック
         conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
     
     finally:
         conn.close()
 
-# 主程序入口
-if __name__ == '__main__':
-    # 初始化数据库（第一次运行时）
-    # init_db()  # 首次运行时取消注释
+@app.route('/api/update-entry/<int:entry_id>', methods=['PUT'])
+def update_entry(entry_id):
+    """
+    既存の見出し語を更新
+    """
+    data = request.json
     
-    # 启动Flask开发服务器
-    # debug=True 开启调试模式，代码修改后自动重启
-    # port=5000 设置端口号
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # トランザクション開始
+        conn.execute('BEGIN')
+        
+        # 見出し語の基本情報を更新
+        cursor.execute('''
+            UPDATE entries SET
+                headword = ?, kana = ?, ipa = ?, pos = ?, 
+                verb_class = ?, tone = ?, etymology = ?, historical_change = ?
+            WHERE id = ?
+        ''', (
+            data['headword'],
+            data.get('kana'),
+            data.get('ipa'),
+            data.get('pos'),
+            data.get('verb_class'),
+            data.get('tone'),
+            data.get('etymology'),
+            data.get('historical_change'),
+            entry_id
+        ))
+        
+        # 既存の関連データを削除
+        cursor.execute('DELETE FROM meanings WHERE entry_id = ?', (entry_id,))
+        cursor.execute('DELETE FROM synonyms WHERE entry_id = ?', (entry_id,))
+        cursor.execute('DELETE FROM conjugations WHERE entry_id = ?', (entry_id,))
+        cursor.execute('DELETE FROM examples WHERE entry_id = ?', (entry_id,))
+        
+        # 新しいデータを挿入
+        # 意味
+        for lang_code, meanings in data.get('meanings', {}).items():
+            for i, meaning in enumerate(meanings, 1):
+                cursor.execute('''
+                    INSERT INTO meanings 
+                    (entry_id, language, meaning_number, definition)
+                    VALUES (?, ?, ?, ?)
+                ''', (entry_id, lang_code, i, meaning))
+        
+        # 同義語
+        for synonym in data.get('synonyms', []):
+            cursor.execute('''
+                INSERT INTO synonyms (entry_id, synonym)
+                VALUES (?, ?)
+            ''', (entry_id, synonym))
+        
+        # 動詞活用
+        for conjugation in data.get('conjugations', []):
+            cursor.execute('''
+                INSERT INTO conjugations 
+                (entry_id, form_name, conjugated_form)
+                VALUES (?, ?, ?)
+            ''', (entry_id, conjugation['form'], conjugation['conjugated']))
+        
+        # 例文
+        for example in data.get('examples', []):
+            cursor.execute('''
+                INSERT INTO examples (entry_id, yonaguni_sentence)
+                VALUES (?, ?)
+            ''', (entry_id, example['yonaguni']))
+            
+            example_id = cursor.lastrowid
+            
+            # 例文翻訳
+            for lang_code, translation in example.get('translations', {}).items():
+                cursor.execute('''
+                    INSERT INTO example_translations 
+                    (example_id, language, word_by_word, free_translation)
+                    VALUES (?, ?, ?, ?)
+                ''', (example_id, lang_code, 
+                      translation.get('word_by_word'), 
+                      translation.get('free_translation')))
+        
+        # トランザクションをコミット
+        conn.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        # エラー発生時はロールバック
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+    
+    finally:
+        conn.close()
+
+@app.route('/api/delete-entry/<int:entry_id>', methods=['DELETE'])
+def delete_entry(entry_id):
+    """
+    見出し語を削除
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # カスケード削除により関連データも自動的に削除される
+        cursor.execute('DELETE FROM entries WHERE id = ?', (entry_id,))
+        conn.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+    
+    finally:
+        conn.close()
+
+# メインプログラムエントリーポイント
+if __name__ == '__main__':
+    # データベースを初期化（初回実行時）
+    # init_db()  # 初回実行時はコメントを外す
+    
+    # Flask開発サーバーを起動
+    # debug=True デバッグモードを有効化、コード変更後に自動再起動
+    # port=5000 ポート番号を設定
     app.run(debug=True, port=5000)

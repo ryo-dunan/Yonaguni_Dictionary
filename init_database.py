@@ -1,43 +1,43 @@
-# init_database.py - 数据库初始化和数据管理脚本
-# 这个脚本用于初始化数据库和添加词条数据
+# init_database.py - データベース初期化とデータ管理スクリプト
+# このスクリプトはデータベースの初期化と見出し語データの追加に使用される
 
 import sqlite3
 import json
 import os
 
 def create_database():
-    """创建数据库并初始化表结构"""
-    # 确保database文件夹存在
+    """データベースを作成してテーブル構造を初期化"""
+    # databaseフォルダが存在することを確認
     if not os.path.exists('database'):
         os.makedirs('database')
     
-    # 连接数据库（如果不存在会自动创建）
+    # データベースに接続（存在しない場合は自動的に作成される）
     conn = sqlite3.connect('database/yonaguni_dict.db')
     cursor = conn.cursor()
-
-    # 读取并执行SQL schema文件
+    
+    # SQL schemaファイルを読み込んで実行
     with open('database/schema.sql', 'r', encoding='utf-8') as f:
-        sql_script = f.read() 
+        sql_script = f.read()
     
     cursor.executescript(sql_script)
     conn.commit()
     conn.close()
     
-    print("✅ 数据库创建成功！")
+    print("✅ データベース作成成功！")
 
 def add_sample_entries():
-    """添加示例词条数据"""
+    """サンプル見出し語データを追加"""
     conn = sqlite3.connect('database/yonaguni_dict.db')
     cursor = conn.cursor()
     
-    # 示例词条数据
+    # サンプル見出し語データ
     sample_entries = [
         {
-            'headword': 'てぃだん',
-            'kana': 'てぃだん',
-            'ipa': '/tidan/',
+            'headword': 'かい',
+            'kana': 'かい',
+            'ipa': 'kai',
             'pos': '名詞',
-            'tone': 'C',
+            'tone': '平板型',
             'meanings': {
                 'ja': ['太陽'],
                 'zh-tw': ['太陽'],
@@ -45,55 +45,40 @@ def add_sample_entries():
             },
             'examples': [
                 {
-                    'yonaguni': 'てぃだんや ‘とぅや くらぬん',
+                    'yonaguni': 'かいぬ　あがたん',
                     'translations': {
                         'ja': {
-                            'word_by_word': '太陽-主題 人-主題　殺さない',
-                            'free_translation': '太陽は人を殺さない(太陽は人間を殺さない。すべてに恵みを与えてくれる)「与那国のことわざ」より。'
-                        },
-                        'zh-tw': {
-                            'word_by_word': '太陽-主題 人-主題　不杀',
-                            'free_translation': '太陽不會殺人(太陽不會殺人，而是會給予一切以恩惠)出自「与那国のことわざ（與那國的諺語）」。'
-                        },
-                        'en': {
-                            'word_by_word': 'sun-TOP people-TOP　kill-NEG-IND',
-                            'free_translation': 'The sun never kills(but benefits everything in the world).'
-                        },
-                        
-                       
+                            'word_by_word': '太陽-が　昇った',
+                            'free_translation': '太陽が昇った'
+                        }
                     }
                 }
             ]
         },
         {
-            'headword': 'あいぐん',
-            'kana': 'あいぐん',
-            'ipa': 'aiguŋ',
+            'headword': 'みぬん',
+            'kana': 'みぬん',
+            'ipa': 'minuŋ',
             'pos': '動詞',
-            'verb_class': 'C-',
-            'tone': 'B',
+            'verb_class': '第一類',
+            'tone': '上昇型',
             'meanings': {
-                'ja': ['歩く', '走る'],
-                'zh-tw': ['走', '跑'],
-                'en': ['to walk', 'to run']
+                'ja': ['見る', '見える'],
+                'zh-tw': ['看', '看見'],
+                'en': ['to see', 'to look']
             },
             'conjugations': [
-                {'form': '現在形', 'conjugated': 'あいぐん'},
-                {'form': '過去形', 'conjugated': 'あいてぃたん'},
-                {'form': '完了形', 'conjugated': 'あいてゃん'},
-                {'form': '否定形', 'conjugated': 'あいがぬん'},
-                {'form': '連用形', 'conjugated': 'あいてぃ'},
-                {'form': '連体形', 'conjugated': 'あいぐ'},
-                {'form': '受身形', 'conjugated': 'あいがりるん'},
-                {'form': '使役形', 'conjugated': 'あいがみるん'}
+                {'form': '過去形', 'conjugated': 'みだん'},
+                {'form': '否定形', 'conjugated': 'みぬぬん'},
+                {'form': '連用形', 'conjugated': 'みー'}
             ],
             'examples': [
                 {
-                    'yonaguni': 'はま　あいぐん',
+                    'yonaguni': 'うみ　みぬん',
                     'translations': {
                         'ja': {
-                            'word_by_word': '砂浜　歩く',
-                            'free_translation': '砂浜を歩く'
+                            'word_by_word': '海　見る',
+                            'free_translation': '海を見る'
                         }
                     }
                 }
@@ -113,10 +98,10 @@ def add_sample_entries():
         }
     ]
     
-    # 插入示例数据
+    # サンプルデータを挿入
     for entry_data in sample_entries:
         try:
-            # 插入主词条
+            # 主見出し語を挿入
             cursor.execute('''
                 INSERT INTO entries 
                 (headword, kana, ipa, pos, verb_class, tone, etymology, historical_change)
@@ -134,7 +119,7 @@ def add_sample_entries():
             
             entry_id = cursor.lastrowid
             
-            # 插入词义
+            # 意味を挿入
             if 'meanings' in entry_data:
                 for lang, meanings in entry_data['meanings'].items():
                     for i, meaning in enumerate(meanings, 1):
@@ -144,7 +129,7 @@ def add_sample_entries():
                             VALUES (?, ?, ?, ?)
                         ''', (entry_id, lang, i, meaning))
             
-            # 插入动词活用
+            # 動詞活用を挿入
             if 'conjugations' in entry_data:
                 for conj in entry_data['conjugations']:
                     cursor.execute('''
@@ -153,7 +138,7 @@ def add_sample_entries():
                         VALUES (?, ?, ?)
                     ''', (entry_id, conj['form'], conj['conjugated']))
             
-            # 插入例句
+            # 例文を挿入
             if 'examples' in entry_data:
                 for example in entry_data['examples']:
                     cursor.execute('''
@@ -163,7 +148,7 @@ def add_sample_entries():
                     
                     example_id = cursor.lastrowid
                     
-                    # 插入例句翻译
+                    # 例文翻訳を挿入
                     if 'translations' in example:
                         for lang, trans in example['translations'].items():
                             cursor.execute('''
@@ -174,63 +159,63 @@ def add_sample_entries():
                                   trans.get('word_by_word'), 
                                   trans.get('free_translation')))
             
-            print(f"✅ 添加词条: {entry_data['headword']}")
+            print(f"✅ 見出し語追加: {entry_data['headword']}")
             
         except sqlite3.IntegrityError as e:
-            print(f"⚠️  词条 {entry_data['headword']} 可能已存在: {e}")
+            print(f"⚠️  見出し語 {entry_data['headword']} は既に存在している可能性があります: {e}")
     
     conn.commit()
     conn.close()
-    print("\n✅ 示例数据添加完成！")
+    print("\n✅ サンプルデータ追加完了！")
 
 def add_new_entry():
-    """交互式添加新词条"""
-    print("\n=== 添加新词条 ===")
+    """インタラクティブに新しい見出し語を追加"""
+    print("\n=== 新規見出し語追加 ===")
     
-    # 收集基本信息
-    headword = input("见出语（与那国语）: ").strip()
+    # 基本情報を収集
+    headword = input("見出し語（与那国語）: ").strip()
     if not headword:
-        print("见出语不能为空！")
+        print("見出し語は必須です！")
         return
     
-    kana = input("假名表记（可选）: ").strip() or None
-    ipa = input("IPA表记（可选）: ").strip() or None
-    pos = input("品词（名詞/動詞/形容詞等）: ").strip() or None
+    kana = input("かな表記（オプション）: ").strip() or None
+    ipa = input("IPA表記（オプション）: ").strip() or None
+    pos = input("品詞（名詞/動詞/形容詞など）: ").strip() or None
     
     verb_class = None
     if pos == '動詞':
-        verb_class = input("动词类别: ").strip() or None
+        verb_class = input("動詞クラス: ").strip() or None
     
-    tone = input("音调（可选）: ").strip() or None
-    etymology = input("语源（可选）: ").strip() or None
+    tone = input("音調（オプション）: ").strip() or None
+    etymology = input("語源（オプション）: ").strip() or None
     
-    # 收集词义
+    # 意味を収集
     meanings = {'ja': [], 'zh-tw': [], 'en': []}
     
-    print("\n添加日语词义（输入空行结束）:")
+    print("\n日本語の意味を追加（空行で終了）:")
     while True:
-        meaning = input("  词义: ").strip()
+        meaning = input("  意味: ").strip()
         if not meaning:
             break
         meanings['ja'].append(meaning)
     
-    if input("\n是否添加中文词义？(y/n): ").lower() == 'y':
-        print("添加繁体中文词义（输入空行结束）:")
+    if input("\n繁体中文の意味を追加しますか？(y/n): ").lower() == 'y':
+        print("繁体中文の意味を追加（空行で終了）:")
         while True:
-            meaning = input("  词义: ").strip()
+            meaning = input("  意味: ").strip()
             if not meaning:
                 break
             meanings['zh-tw'].append(meaning)
     
-    if input("\n是否添加英文词义？(y/n): ").lower() == 'y':
-        print("添加英文词义（输入空行结束）:")
+    if input("\n英語の意味を追加しますか？(y/n): ").lower() == 'y':
+        print("英語の意味を追加（空行で終了）:")
         while True:
-            meaning = input("  词义: ").strip()
+            meaning = input("  意味: ").strip()
             if not meaning:
                 break
             meanings['en'].append(meaning)
     
-    # 构建数据结构
+    # データ構造を構築
     entry_data = {
         'headword': headword,
         'kana': kana,
@@ -239,15 +224,15 @@ def add_new_entry():
         'verb_class': verb_class,
         'tone': tone,
         'etymology': etymology,
-        'meanings': {k: v for k, v in meanings.items() if v}  # 只保留有内容的语言
+        'meanings': {k: v for k, v in meanings.items() if v}  # 内容のある言語のみ保持
     }
     
-    # 保存到数据库
+    # データベースに保存
     conn = sqlite3.connect('database/yonaguni_dict.db')
     cursor = conn.cursor()
     
     try:
-        # 插入主词条
+        # 主見出し語を挿入
         cursor.execute('''
             INSERT INTO entries 
             (headword, kana, ipa, pos, verb_class, tone, etymology)
@@ -264,7 +249,7 @@ def add_new_entry():
         
         entry_id = cursor.lastrowid
         
-        # 插入词义
+        # 意味を挿入
         for lang, meanings in entry_data.get('meanings', {}).items():
             for i, meaning in enumerate(meanings, 1):
                 cursor.execute('''
@@ -274,22 +259,22 @@ def add_new_entry():
                 ''', (entry_id, lang, i, meaning))
         
         conn.commit()
-        print(f"\n✅ 词条 '{headword}' 添加成功！")
+        print(f"\n✅ 見出し語 '{headword}' の追加に成功しました！")
         
     except Exception as e:
         conn.rollback()
-        print(f"\n❌ 添加失败: {e}")
+        print(f"\n❌ 追加失敗: {e}")
     
     finally:
         conn.close()
 
 def export_data():
-    """导出数据库数据为JSON格式"""
+    """データベースデータをJSON形式でエクスポート"""
     conn = sqlite3.connect('database/yonaguni_dict.db')
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # 获取所有词条
+    # すべての見出し語を取得
     cursor.execute('SELECT * FROM entries')
     entries = cursor.fetchall()
     
@@ -299,7 +284,7 @@ def export_data():
         entry_dict = dict(entry)
         entry_id = entry['id']
         
-        # 获取词义
+        # 意味を取得
         cursor.execute('''
             SELECT language, meaning_number, definition 
             FROM meanings 
@@ -315,7 +300,7 @@ def export_data():
             meanings[lang].append(row['definition'])
         entry_dict['meanings'] = meanings
         
-        # 获取例句
+        # 例文を取得
         cursor.execute('''
             SELECT ex.id, ex.yonaguni_sentence
             FROM examples ex
@@ -329,7 +314,7 @@ def export_data():
                 'translations': {}
             }
             
-            # 获取例句翻译
+            # 例文翻訳を取得
             cursor.execute('''
                 SELECT language, word_by_word, free_translation
                 FROM example_translations
@@ -351,23 +336,23 @@ def export_data():
     
     conn.close()
     
-    # 保存为JSON文件
+    # JSONファイルとして保存
     with open('yonaguni_dict_export.json', 'w', encoding='utf-8') as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2)
     
-    print(f"✅ 导出成功！共导出 {len(export_data)} 个词条到 yonaguni_dict_export.json")
+    print(f"✅ エクスポート成功！{len(export_data)} 個の見出し語を yonaguni_dict_export.json にエクスポートしました")
 
 def main_menu():
-    """主菜单"""
+    """メインメニュー"""
     while True:
-        print("\n=== 与那国语词典数据库管理 ===")
-        print("1. 初始化数据库")
-        print("2. 添加示例数据")
-        print("3. 添加新词条")
-        print("4. 导出数据")
-        print("0. 退出")
+        print("\n=== 与那国語辞典データベース管理 ===")
+        print("1. データベースを初期化")
+        print("2. サンプルデータを追加")
+        print("3. 新規見出し語を追加")
+        print("4. データをエクスポート")
+        print("0. 終了")
         
-        choice = input("\n请选择操作 (0-4): ").strip()
+        choice = input("\n操作を選択してください (0-4): ").strip()
         
         if choice == '1':
             create_database()
@@ -378,15 +363,15 @@ def main_menu():
         elif choice == '4':
             export_data()
         elif choice == '0':
-            print("再见！")
+            print("さようなら！")
             break
         else:
-            print("无效的选择，请重试。")
+            print("無効な選択です。もう一度お試しください。")
 
 if __name__ == '__main__':
-    # 首先检查schema.sql文件是否存在
+    # まずschema.sqlファイルが存在するかチェック
     if not os.path.exists('database/schema.sql'):
-        print("❌ 错误：database/schema.sql 文件不存在！")
-        print("请先将之前提供的SQL代码保存为 database/schema.sql 文件。")
+        print("❌ エラー：database/schema.sql ファイルが存在しません！")
+        print("先に提供されたSQLコードを database/schema.sql ファイルとして保存してください。")
     else:
         main_menu()
