@@ -310,6 +310,7 @@ def get_entry(entry_id):
         'ipa': entry['ipa'],
         'pos': entry['pos'],
         'verb_class': entry['verb_class'],
+        'verb_stem': entry['verb_stem'],
         'tone': entry['tone'],
         'etymology': entry['etymology'],
         'historical_change': entry['historical_change']
@@ -409,9 +410,10 @@ def get_all_entries():
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # ★★★ 修正点 ★★★ verb_class と verb_stem を取得するよう変更
     cursor.execute('''
-        SELECT e.id, e.headword, e.kana, e.pos,
-               GROUP_CONCAT(m.definition, '、') as definitions
+        SELECT e.id, e.headword, e.kana, e.pos, e.verb_class, e.verb_stem,
+               m.definition
         FROM entries e
         LEFT JOIN meanings m ON e.id = m.entry_id
         WHERE m.language = 'ja' AND m.meaning_number = 1
@@ -426,7 +428,9 @@ def get_all_entries():
             'headword': row['headword'],
             'kana': row['kana'],
             'pos': row['pos'],
-            'definition': row['definitions']
+            'verb_class': row['verb_class'],
+            'verb_stem': row['verb_stem'],
+            'definition': row['definition']
         })
     
     conn.close()
@@ -450,14 +454,15 @@ def add_entry():
         # 見出し語の基本情報を挿入
         cursor.execute('''
             INSERT INTO entries 
-            (headword, kana, ipa, pos, verb_class, tone, etymology, historical_change)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (headword, kana, ipa, pos, verb_class, verb_stem, tone, etymology, historical_change)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data['headword'],
             data.get('kana'),
             data.get('ipa'),
             data.get('pos'),
             data.get('verb_class'),
+            data.get('verb_stem'),
             data.get('tone'),
             data.get('etymology'),
             data.get('historical_change')
@@ -539,7 +544,7 @@ def update_entry(entry_id):
         cursor.execute('''
             UPDATE entries SET
                 headword = ?, kana = ?, ipa = ?, pos = ?, 
-                verb_class = ?, tone = ?, etymology = ?, historical_change = ?
+                verb_class = ?, verb_stem = ?, tone = ?, etymology = ?, historical_change = ?
             WHERE id = ?
         ''', (
             data['headword'],
@@ -547,6 +552,7 @@ def update_entry(entry_id):
             data.get('ipa'),
             data.get('pos'),
             data.get('verb_class'),
+            data.get('verb_stem'),
             data.get('tone'),
             data.get('etymology'),
             data.get('historical_change'),
@@ -616,6 +622,69 @@ def update_entry(entry_id):
     finally:
         conn.close()
 
+@app.route('/api/bulk-delete-entries', methods=['POST'])
+def bulk_delete_entries():
+    """
+    複数の見出し語を一括で削除
+    """
+    data = request.json
+    ids_to_delete = data.get('ids')
+
+    if not ids_to_delete or not isinstance(ids_to_delete, list):
+        return jsonify({'success': False, 'error': '削除するIDのリストが無効です。'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        conn.execute('BEGIN')
+        # プレースホルダ (?) をIDの数だけ生成
+        placeholders = ','.join('?' for _ in ids_to_delete)
+        # カスケード削除により関連データも自動的に削除される
+        cursor.execute(f'DELETE FROM entries WHERE id IN ({placeholders})', ids_to_delete)
+        conn.commit()
+        return jsonify({'success': True, 'deleted_count': len(ids_to_delete)})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+    finally:
+        conn.close()
+
+@app.route('/api/delete-all-entries', methods=['DELETE'])
+def delete_all_entries():
+    """
+    すべての見出し語を削除
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        conn.execute('BEGIN')
+        # 関連テーブルもCASCADE DELETEで削除される
+        cursor.execute('DELETE FROM entries')
+        # media_filesテーブルも別途クリアする
+        cursor.execute('DELETE FROM media_files')
+        conn.commit()
+
+        # メディアフォルダ内のファイルを削除
+        for folder in ['audio', 'images']:
+            folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+            for filename in os.listdir(folder_path):
+                file_path = os.path.join(folder_path, filename)
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+    finally:
+        conn.close()
+
 @app.route('/api/delete-entry/<int:entry_id>', methods=['DELETE'])
 def delete_entry(entry_id):
     """
@@ -637,6 +706,113 @@ def delete_entry(entry_id):
     
     finally:
         conn.close()
+
+@app.route('/api/bulk-import', methods=['POST'])
+def bulk_import():
+    """
+    JSONデータから見出し語を一括でインポートする
+    """
+    entries_data = request.json
+    if not isinstance(entries_data, list):
+        return jsonify({'success': False, 'error': 'データは配列形式でなければなりません。'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 処理結果を記録する変数
+    success_count = 0
+    errors = []
+
+    # 各見出し語をループ処理
+    for index, data in enumerate(entries_data):
+        try:
+            # トランザクション開始 (各エントリごと)
+            conn.execute('BEGIN')
+
+            # 見出し語の基本情報を挿入
+            cursor.execute('''
+                INSERT INTO entries 
+                (headword, kana, ipa, pos, verb_class, verb_stem, tone, etymology, historical_change)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data['headword'],
+                data.get('kana'),
+                data.get('ipa'),
+                data.get('pos'),
+                data.get('verb_class'),
+                data.get('verb_stem'),
+                data.get('tone'),
+                data.get('etymology'),
+                data.get('historical_change')
+            ))
+            
+            entry_id = cursor.lastrowid
+            
+            # 意味を挿入（多言語対応）
+            for lang_code, meanings in data.get('meanings', {}).items():
+                for i, meaning in enumerate(meanings, 1):
+                    cursor.execute('''
+                        INSERT INTO meanings 
+                        (entry_id, language, meaning_number, definition)
+                        VALUES (?, ?, ?, ?)
+                    ''', (entry_id, lang_code, i, meaning))
+            
+            # 同義語を挿入
+            for synonym in data.get('synonyms', []):
+                cursor.execute('''
+                    INSERT INTO synonyms (entry_id, synonym)
+                    VALUES (?, ?)
+                ''', (entry_id, synonym))
+            
+            # 動詞活用を挿入
+            for conjugation in data.get('conjugations', []):
+                cursor.execute('''
+                    INSERT INTO conjugations 
+                    (entry_id, form_name, conjugated_form)
+                    VALUES (?, ?, ?)
+                ''', (entry_id, conjugation['form'], conjugation['conjugated']))
+            
+            # 例文を挿入
+            for example in data.get('examples', []):
+                cursor.execute('''
+                    INSERT INTO examples (entry_id, yonaguni_sentence)
+                    VALUES (?, ?)
+                ''', (entry_id, example['yonaguni']))
+                
+                example_id = cursor.lastrowid
+                
+                # 例文翻訳を挿入
+                for lang_code, translation in example.get('translations', {}).items():
+                    cursor.execute('''
+                        INSERT INTO example_translations 
+                        (example_id, language, word_by_word, free_translation)
+                        VALUES (?, ?, ?, ?)
+                    ''', (example_id, lang_code, 
+                          translation.get('word_by_word'), 
+                          translation.get('free_translation')))
+            
+            # この見出し語のトランザクションをコミット
+            conn.commit()
+            success_count += 1
+            
+        except Exception as e:
+            # エラー発生時はロールバック
+            conn.rollback()
+            errors.append({
+                'index': index + 1,
+                'headword': data.get('headword', 'N/A'),
+                'error': str(e)
+            })
+    
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'total_entries': len(entries_data),
+        'success_count': success_count,
+        'error_count': len(errors),
+        'errors': errors
+    })
 
 def allowed_file(filename, file_type):
     """
