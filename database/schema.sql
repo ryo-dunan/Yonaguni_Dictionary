@@ -70,14 +70,23 @@ CREATE TABLE IF NOT EXISTS ui_translations (
     UNIQUE(key, language)                  -- 各キー+言語の組み合わせが一意であることを保証
 );
 
--- クエリ性能を向上させるためのインデックスを作成
-CREATE INDEX idx_entries_headword ON entries(headword);
-CREATE INDEX idx_entries_kana ON entries(kana);
-CREATE INDEX idx_meanings_entry_id ON meanings(entry_id);
-CREATE INDEX idx_meanings_language ON meanings(language);
-CREATE INDEX idx_examples_entry_id ON examples(entry_id);
-CREATE INDEX idx_conjugations_entry_id ON conjugations(entry_id);
-CREATE INDEX idx_conjugations_form ON conjugations(conjugated_form);
+-- 8. メディアファイルテーブル（音声と画像を管理）
+CREATE TABLE IF NOT EXISTS media_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entry_id INTEGER,                      -- 見出し語ID（NULLの場合は例文用）
+    example_id INTEGER,                    -- 例文ID（NULLの場合は見出し語用）
+    file_type TEXT NOT NULL,               -- ファイルタイプ：audio, image
+    file_path TEXT NOT NULL,               -- ファイルパス
+    original_filename TEXT,                -- 元のファイル名
+    description TEXT,                      -- ファイルの説明
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+    FOREIGN KEY (example_id) REFERENCES examples(id) ON DELETE CASCADE
+);
+
+-- メディアファイル用のインデックス
+CREATE INDEX idx_media_files_entry_id ON media_files(entry_id);
+CREATE INDEX idx_media_files_example_id ON media_files(example_id);
 
 -- UI翻訳サンプルデータを挿入
 INSERT INTO ui_translations (key, language, translation) VALUES
